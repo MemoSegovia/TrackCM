@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrackCM - Colegio Mexicano Educación Física</title>
+  <?!= include('Styles'); ?>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-950 text-slate-100 antialiased selection:bg-amber-500 selection:text-slate-950">
+
+  <!-- HEADER INSTITUCIONAL -->
+  <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- BRAND & LOGO -->
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-300 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg shadow-amber-500/20">
+            <i class="fa-solid fa-running"></i>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-amber-400 bg-clip-text text-transparent">TrackCM</span>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30">EduFísica</span>
+            </div>
+            <p class="text-xs text-slate-400 font-medium">Colegio Mexicano</p>
+          </div>
+        </div>
+
+        <!-- SELECTOR CICLO & PERFIL -->
+        <div class="flex items-center space-x-3 sm:space-x-4">
+          <!-- Ciclo Escolar Activo Pill -->
+          <div class="hidden sm:flex items-center space-x-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
+            <i class="fa-regular fa-calendar-check text-amber-400 text-sm"></i>
+            <span class="text-xs text-slate-400 font-medium">Ciclo:</span>
+            <select id="globalCicloSelect" class="bg-transparent text-xs font-bold text-slate-200 focus:outline-none cursor-pointer">
+              <option value="2026-2027" selected class="bg-slate-900">2026-2027 (Anual)</option>
+              <option value="2025-2026" class="bg-slate-900">2025-2026 (Anual)</option>
+              <option value="2026-3" class="bg-slate-900">2026-3 (Preparatoria)</option>
+              <option value="2027-1" class="bg-slate-900">2027-1 (Preparatoria)</option>
+            </select>
+          </div>
+
+          <!-- Selector de Rol (Demostración / Simulación de Sesión) -->
+          <div class="flex items-center space-x-2 bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-slate-700">
+            <i class="fa-solid fa-user-shield text-emerald-400 text-sm"></i>
+            <select id="roleSelector" class="bg-transparent text-xs font-bold text-slate-200 focus:outline-none cursor-pointer">
+              <option value="Maestro" selected class="bg-slate-900">Rol: Maestro</option>
+              <option value="Administrador" class="bg-slate-900">Rol: Administrador</option>
+              <option value="Alumno" class="bg-slate-900">Rol: Alumno</option>
+            </select>
+          </div>
+
+          <!-- Profile Badge -->
+          <div class="hidden md:flex items-center space-x-2 border-l border-slate-800 pl-3">
+            <div class="w-8 h-8 rounded-full bg-slate-800 border border-amber-500/40 flex items-center justify-center text-amber-400 font-bold text-xs" id="userAvatar">
+              MC
+            </div>
+            <div class="text-left leading-tight">
+              <div class="text-xs font-bold text-slate-200" id="userName">Prof. Juan Pérez</div>
+              <div class="text-[10px] text-emerald-400 font-semibold" id="userRoleBadge">Docente ED</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- MAIN NAVIGATION TABS -->
+    <nav class="bg-slate-900 border-t border-slate-800 px-4">
+      <div class="max-w-7xl mx-auto flex space-x-1 sm:space-x-2 overflow-x-auto py-2 scrollbar-none">
+        
+        <button onclick="switchTab('campo')" id="tab-campo" class="tab-btn active px-4 py-2 rounded-lg text-xs font-semibold flex items-center space-x-2 whitespace-nowrap">
+          <i class="fa-solid fa-clipboard-check text-sm"></i>
+          <span>Registro en Campo</span>
+        </button>
+
+        <button onclick="switchTab('expediente')" id="tab-expediente" class="tab-btn px-4 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 flex items-center space-x-2 whitespace-nowrap">
+          <i class="fa-solid fa-id-card-clip text-sm"></i>
+          <span>Expediente Histórico</span>
+        </button>
+
+        <button onclick="switchTab('leaderboards')" id="tab-leaderboards" class="tab-btn px-4 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 flex items-center space-x-2 whitespace-nowrap">
+          <i class="fa-solid fa-trophy text-sm"></i>
+          <span>Tablas de Posiciones</span>
+        </button>
+
+        <button onclick="switchTab('admin')" id="tab-admin" class="tab-btn px-4 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 flex items-center space-x-2 whitespace-nowrap">
+          <i class="fa-solid fa-sliders text-sm"></i>
+          <span>Administración & Carga Masiva</span>
+        </button>
+
+        <button onclick="openReportModal()" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 px-4 py-2 rounded-lg text-xs font-bold flex items-center space-x-2 whitespace-nowrap shadow-md shadow-amber-500/20 transition">
+          <i class="fa-solid fa-file-invoice text-sm"></i>
+          <span>Formato Oficial Sheets</span>
+        </button>
+
+      </div>
+    </nav>
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL DE VISTAS -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+    <!-- NOTIFICACIÓN / ALERTA DINÁMICA -->
+    <div id="toastNotification" class="hidden transition-all duration-300 p-4 rounded-xl border glass-card flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-xl"></i>
+        <div>
+          <h4 id="toastTitle" class="text-sm font-bold text-slate-100">Operación exitosa</h4>
+          <p id="toastMessage" class="text-xs text-slate-300">Los datos fueron registrados en Google Sheets.</p>
+        </div>
+      </div>
+      <button onclick="dismissToast()" class="text-slate-400 hover:text-white text-sm"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 1. VISTA: REGISTRO EN CAMPO (DOCENTE/MAESTRO) -->
+    <!-- ========================================== -->
+    <section id="view-campo" class="space-y-6">
+      
+      <!-- BARRA DE FILTROS EN CASCADA -->
+      <div class="glass-card p-4 sm:p-5 rounded-2xl border border-slate-800">
+        <h2 class="text-sm uppercase tracking-wider font-extrabold text-amber-400 mb-3 flex items-center space-x-2">
+          <i class="fa-solid fa-filter"></i>
+          <span>Selección Académica del Alumno</span>
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Nivel Educativo</label>
+            <select id="campoNivelSelect" onchange="onNivelChange()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-slate-200 focus:border-amber-500 focus:outline-none">
+              <option value="Primaria">Primaria (Anual)</option>
+              <option value="Kínder">Kínder (Anual)</option>
+              <option value="Secundaria">Secundaria (Anual)</option>
+              <option value="Preparatoria">Preparatoria (Semestral)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Grado</label>
+            <select id="campoGradoSelect" onchange="onFilterChange()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-slate-200 focus:border-amber-500 focus:outline-none">
+              <!-- Opciones dinámicas -->
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Grupo</label>
+            <select id="campoGrupoSelect" onchange="onFilterChange()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-slate-200 focus:border-amber-500 focus:outline-none">
+              <option value="A">Grupo A</option>
+              <option value="B">Grupo B</option>
+              <option value="C">Grupo C</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 uppercase mb-1">Alumno Seleccionado</label>
+            <select id="campoAlumnoSelect" onchange="onStudentSelectChange()" class="w-full bg-slate-900 border border-amber-500/50 rounded-xl px-3 py-2 text-xs font-bold text-amber-300 focus:border-amber-500 focus:outline-none">
+              <!-- Lista de alumnos cargados -->
+            </select>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- TARJETA INFO DEL ALUMNO SELECCIONADO -->
+      <div id="studentBadgeCard" class="glass-card p-4 rounded-2xl border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center space-x-4">
+          <div class="w-12 h-12 rounded-full bg-gradient-to-tr from-amber-500 to-amber-600 flex items-center justify-center text-slate-950 font-black text-lg" id="campoStudentAvatar">
+            MH
+          </div>
+          <div>
+            <h3 class="text-base font-extrabold text-white" id="campoStudentName">Mateo Hernández Ruiz</h3>
+            <div class="flex flex-wrap items-center gap-2 text-xs text-slate-400 mt-0.5">
+              <span class="px-2 py-0.5 bg-slate-800 rounded font-semibold text-slate-300" id="campoStudentGender">Varonil</span>
+              <span>•</span>
+              <span id="campoStudentAcademic">Primaria 3°A</span>
+              <span>•</span>
+              <span class="text-amber-400 font-semibold" id="campoStudentAge">10 años</span>
+            </div>
+          </div>
+        </div>
+        <div class="text-right">
+          <span class="text-[10px] text-slate-400 block uppercase font-bold">Ciclo Activo de Captura</span>
+          <span class="text-xs font-extrabold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20" id="campoActiveCycleBadge">2026-2027</span>
+        </div>
+      </div>
+
+      <!-- MÓDULOS DE EVALUACIÓN (SUB-PESTAÑAS) -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- 1. CAPTURA ANTROPOMÉTRICA -->
+        <div class="glass-card p-5 rounded-2xl border border-slate-800 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-sm font-bold text-white flex items-center space-x-2">
+                <i class="fa-solid fa-weight-scale text-amber-400"></i>
+                <span>Ficha Antropométrica</span>
+              </h3>
+              <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded">Auto IMC</span>
+            </div>
+
+            <form id="formAntropo" onsubmit="handleSaveAntropo(event)" class="space-y-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Peso Corporal (kg)</label>
+                <input type="number" step="0.1" id="antropoPeso" oninput="calculateBMI()" required placeholder="Ej. 34.5" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none">
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Estatura (cm)</label>
+                <input type="number" step="0.5" id="antropoEstatura" oninput="calculateBMI()" required placeholder="Ej. 138" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none">
+              </div>
+
+              <!-- BMI RESULT PREVIEW -->
+              <div class="bg-slate-900/90 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+                <div>
+                  <span class="text-[11px] text-slate-400 block font-medium">Índice IMC Calculado</span>
+                  <span class="text-lg font-black text-amber-400" id="antropoIMCValue">0.00</span>
+                </div>
+                <span class="text-xs px-2.5 py-1 rounded-full font-bold bg-slate-800 text-slate-400" id="antropoIMCStatus">Ingrese datos</span>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Comentarios / Observaciones</label>
+                <textarea id="antropoComentarios" rows="2" placeholder="Observaciones de postura o condición..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:border-amber-500 focus:outline-none"></textarea>
+              </div>
+
+              <button type="submit" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition shadow-lg shadow-amber-500/20 flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-floppy-disk"></i>
+                <span>Guardar Registro Antropométrico</span>
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- 2. CAPTURA ATLETISMO (CRONÓMETRO Y MULTI-INTENTOS) -->
+        <div class="glass-card p-5 rounded-2xl border border-slate-800 lg:col-span-2 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-bold text-white flex items-center space-x-2">
+                <i class="fa-solid fa-stopwatch text-sky-400"></i>
+                <span>Módulo de Atletismo y Campo</span>
+              </h3>
+              <!-- Selector Tipo de Prueba -->
+              <div class="flex bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs">
+                <button type="button" onclick="setAthleticMode('velocidad')" id="modeVelBtn" class="px-3 py-1 rounded-lg font-bold bg-sky-500 text-slate-950">Velocidad / Resistencia</button>
+                <button type="button" onclick="setAthleticMode('intentos')" id="modeIntBtn" class="px-3 py-1 rounded-lg font-bold text-slate-400 hover:text-white">Salto / Lanzamiento</button>
+              </div>
+            </div>
+
+            <!-- MODO VELOCIDAD / RESISTENCIA (CRONÓMETRO) -->
+            <div id="athleticModeVelocidad" class="space-y-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                
+                <div>
+                  <label class="block text-xs font-semibold text-slate-300 mb-1">Prueba Seleccionada</label>
+                  <select id="atletismoPruebaSelect" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-200 focus:outline-none">
+                    <option value="50m Velocidad">50m Velocidad</option>
+                    <option value="75m Velocidad" selected>75m Velocidad</option>
+                    <option value="100m Velocidad">100m Velocidad</option>
+                    <option value="800m Resistencia">800m Resistencia</option>
+                    <option value="1500m Resistencia">1500m Resistencia</option>
+                  </select>
+
+                  <!-- Digital Stopwatch Widget -->
+                  <div class="mt-4 p-4 rounded-xl border border-sky-500/30 bg-slate-950 text-center">
+                    <span class="text-[10px] text-sky-400 font-bold uppercase tracking-widest block mb-1">Cronómetro de Campo</span>
+                    <div class="stopwatch-display text-3xl font-black rounded-lg py-2" id="swDisplay">00:00.00</div>
+                    
+                    <div class="grid grid-cols-3 gap-2 mt-3">
+                      <button type="button" onclick="swStartPause()" id="swStartBtn" class="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs py-2 rounded-lg transition">Iniciar</button>
+                      <button type="button" onclick="swLap()" id="swLapBtn" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs py-2 rounded-lg transition">Vuelta</button>
+                      <button type="button" onclick="swReset()" id="swResetBtn" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs py-2 rounded-lg transition">Reset</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Laps breakdown -->
+                <div>
+                  <label class="block text-xs font-semibold text-slate-300 mb-1">Registro de Laps / Vueltas</label>
+                  <div class="h-40 bg-slate-950 border border-slate-800 rounded-xl p-3 overflow-y-auto space-y-1" id="swLapsContainer">
+                    <p class="text-xs text-slate-500 italic text-center py-4">Presione "Vuelta" durante el cronometraje.</p>
+                  </div>
+                  
+                  <div class="mt-3">
+                    <label class="block text-[11px] font-semibold text-slate-400">Puntuación / Marca Asignada</label>
+                    <input type="number" id="swPointsInput" placeholder="Ej. 95 (Puntos)" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none">
+                  </div>
+                </div>
+
+              </div>
+
+              <button type="button" onclick="saveVelocidadRecord()" class="w-full bg-sky-500 hover:bg-sky-600 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition shadow-lg shadow-sky-500/20 flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-clock"></i>
+                <span>Guardar Marca de Cronómetro</span>
+              </button>
+            </div>
+
+            <!-- MODO SALTO / LANZAMIENTO (3 INTENTOS) -->
+            <div id="athleticModeIntentos" class="hidden space-y-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Prueba Seleccionada</label>
+                <select id="intentosPruebaSelect" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-200 focus:outline-none">
+                  <option value="Salto de Longitud">Salto de Longitud</option>
+                  <option value="Salto de Altura">Salto de Altura</option>
+                  <option value="Lanzamiento de Pelota">Lanzamiento de Pelota</option>
+                  <option value="Lanzamiento de Bala">Lanzamiento de Bala</option>
+                </select>
+              </div>
+
+              <div class="grid grid-cols-3 gap-3">
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-400 mb-1">Intento 1 (m)</label>
+                  <input type="number" step="0.01" id="intent1Input" oninput="calculateBestAttempt()" placeholder="1.95" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:border-amber-500 focus:outline-none">
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-400 mb-1">Intento 2 (m)</label>
+                  <input type="number" step="0.01" id="intent2Input" oninput="calculateBestAttempt()" placeholder="2.10" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:border-amber-500 focus:outline-none">
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-400 mb-1">Intento 3 (m)</label>
+                  <input type="number" step="0.01" id="intent3Input" oninput="calculateBestAttempt()" placeholder="2.15" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:border-amber-500 focus:outline-none">
+                </div>
+              </div>
+
+              <div class="bg-amber-500/10 border border-amber-500/30 p-3 rounded-xl flex items-center justify-between">
+                <div>
+                  <span class="text-xs text-amber-300 font-medium">Mejor Marca Automática:</span>
+                  <span class="text-lg font-black text-amber-400 ml-2" id="bestAttemptDisplay">0.00 m</span>
+                </div>
+                <div class="w-28">
+                  <input type="number" id="intentPointsInput" placeholder="Puntos (Ej. 90)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-white">
+                </div>
+              </div>
+
+              <button type="button" onclick="saveIntentosRecord()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition shadow-lg shadow-amber-500/20 flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-ruler-horizontal"></i>
+                <span>Guardar Mejor Marca de Intentos</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 3. CAPTURA CUALITATIVA Y DEPORTES EN EQUIPO -->
+      <div class="glass-card p-5 rounded-2xl border border-slate-800">
+        <h3 class="text-sm font-bold text-white mb-3 flex items-center space-x-2">
+          <i class="fa-solid fa-clipboard-user text-emerald-400"></i>
+          <span>Evaluaciones Cualitativas y Deportes Colectivos</span>
+        </h3>
+
+        <form id="formQualitative" onsubmit="handleSaveQualitative(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Prueba o Deporte</label>
+            <select id="cualiPruebaSelect" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs font-semibold text-slate-200 focus:outline-none">
+              <option value="Cuerda y Coordinación">Cuerda y Coordinación</option>
+              <option value="Orden y Control">Orden y Control</option>
+              <option value="Abecedario Motor (ABC)">Abecedario Motor (ABC)</option>
+              <option value="Fútbol - Fundamentos">Fútbol - Fundamentos</option>
+              <option value="Básquetbol - Fundamentos">Básquetbol - Fundamentos</option>
+              <option value="Voleibol - Fundamentos">Voleibol - Fundamentos</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Evaluación Rápida</label>
+            <div class="grid grid-cols-3 gap-2">
+              <button type="button" onclick="selectEvalGrade('S')" id="evalBtnS" class="eval-btn selected-S border border-slate-700 rounded-xl py-2 text-xs font-black">S (Sobresaliente)</button>
+              <button type="button" onclick="selectEvalGrade('R')" id="evalBtnR" class="eval-btn border border-slate-700 bg-slate-900 text-slate-400 rounded-xl py-2 text-xs font-black">R (Regular)</button>
+              <button type="button" onclick="selectEvalGrade('N/A')" id="evalBtnNA" class="eval-btn border border-slate-700 bg-slate-900 text-slate-400 rounded-xl py-2 text-xs font-black">N/A</button>
+            </div>
+          </div>
+
+          <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition shadow-lg shadow-emerald-500/20 flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-check-double"></i>
+            <span>Guardar Evaluación Cualitativa</span>
+          </button>
+        </form>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 2. VISTA: EXPEDIENTE HISTÓRICO ALUMNO -->
+    <!-- ========================================== -->
+    <section id="view-expediente" class="hidden space-y-6">
+      
+      <!-- SELECCIÓN Y FICHA DEL EXPEDIENTE -->
+      <div class="glass-card p-5 rounded-2xl border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div class="w-full md:w-1/3">
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Seleccionar Alumno a Consultar</label>
+          <select id="expedienteAlumnoSelect" onchange="loadStudentExpediente()" class="w-full bg-slate-900 border border-amber-500/50 rounded-xl px-3 py-2 text-xs font-bold text-amber-300 focus:outline-none">
+            <!-- Dinámico -->
+          </select>
+        </div>
+        <div class="flex items-center space-x-4">
+          <div class="text-right">
+            <h3 class="text-lg font-black text-white" id="expNombre">Mateo Hernández Ruiz</h3>
+            <p class="text-xs text-slate-400" id="expNivelGrado">Primaria 3°A • Colegio Mexicano</p>
+          </div>
+          <div class="w-14 h-14 rounded-2xl bg-amber-500 text-slate-950 font-black text-xl flex items-center justify-center shadow-lg shadow-amber-500/30" id="expAvatar">
+            MH
+          </div>
+        </div>
+      </div>
+
+      <!-- TARJETAS DE MÉTRICAS ACTUALES -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="glass-card p-4 rounded-2xl border border-slate-800">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block">Último Peso</span>
+          <span class="text-2xl font-black text-white" id="expLastPeso">34.5 kg</span>
+        </div>
+        <div class="glass-card p-4 rounded-2xl border border-slate-800">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block">Última Estatura</span>
+          <span class="text-2xl font-black text-white" id="expLastEstatura">138 cm</span>
+        </div>
+        <div class="glass-card p-4 rounded-2xl border border-slate-800">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block">Índice IMC Actual</span>
+          <span class="text-2xl font-black text-emerald-400" id="expLastIMC">18.11</span>
+        </div>
+        <div class="glass-card p-4 rounded-2xl border border-slate-800">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block">Pruebas Registradas</span>
+          <span class="text-2xl font-black text-amber-400" id="expTotalTests">8 Pruebas</span>
+        </div>
+      </div>
+
+      <!-- HISTORIAL CRONOLÓGICO -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- ANTROPOMÉTRICO -->
+        <div class="glass-card p-5 rounded-2xl border border-slate-800">
+          <h3 class="text-sm font-bold text-white mb-4 flex items-center space-x-2">
+            <i class="fa-solid fa-chart-line text-amber-400"></i>
+            <span>Evolución Física Antropométrica</span>
+          </h3>
+          <div class="space-y-3" id="expAntropoTimeline">
+            <!-- Generado dinámicamente -->
+          </div>
+        </div>
+
+        <!-- ATLETISMO Y CUALITATIVO -->
+        <div class="glass-card p-5 rounded-2xl border border-slate-800">
+          <h3 class="text-sm font-bold text-white mb-4 flex items-center space-x-2">
+            <i class="fa-solid fa-medal text-sky-400"></i>
+            <span>Historial Deportivo y Pruebas</span>
+          </h3>
+          <div class="space-y-3" id="expDeporteTimeline">
+            <!-- Generado dinámicamente -->
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 3. VISTA: TABLAS DE POSICIONES (LEADERBOARDS) -->
+    <!-- ========================================== -->
+    <section id="view-leaderboards" class="hidden space-y-6">
+      
+      <!-- FILTROS DE TABLEROS -->
+      <div class="glass-card p-4 rounded-2xl border border-slate-800 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div>
+          <label class="block text-[10px] uppercase font-semibold text-slate-400 mb-1">Ciclo Escolar</label>
+          <select id="lbCicloFilter" onchange="renderLeaderboards()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+            <option value="TODOS">Todos los Ciclos</option>
+            <option value="2026-2027" selected>2026-2027</option>
+            <option value="2026-3">2026-3 (Prep)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[10px] uppercase font-semibold text-slate-400 mb-1">Prueba Atletismo</label>
+          <select id="lbPruebaFilter" onchange="renderLeaderboards()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+            <option value="TODAS">Todas las Pruebas</option>
+            <option value="Velocidad">Velocidad</option>
+            <option value="Resistencia">Resistencia</option>
+            <option value="Salto">Salto de Longitud</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[10px] uppercase font-semibold text-slate-400 mb-1">Nivel</label>
+          <select id="lbNivelFilter" onchange="renderLeaderboards()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+            <option value="TODOS">Todo Colegio Mexicano</option>
+            <option value="Primaria">Primaria</option>
+            <option value="Secundaria">Secundaria</option>
+            <option value="Preparatoria">Preparatoria</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[10px] uppercase font-semibold text-slate-400 mb-1">Grupo</label>
+          <select id="lbGrupoFilter" onchange="renderLeaderboards()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+            <option value="TODOS">Todos los Grupos</option>
+            <option value="A">Grupo A</option>
+            <option value="B">Grupo B</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[10px] uppercase font-semibold text-slate-400 mb-1">Rama / Género</label>
+          <select id="lbGeneroFilter" onchange="renderLeaderboards()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+            <option value="TODOS">Varonil y Femenil</option>
+            <option value="Varonil">Varonil</option>
+            <option value="Femenil">Femenil</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- PODIO PRIMEROS 3 LUTARES -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="podiumContainer">
+        <!-- Renderizado dinámico Top 3 (1, 2, 3) -->
+      </div>
+
+      <!-- TABLA GENERAL TOP 10 -->
+      <div class="glass-card rounded-2xl border border-slate-800 overflow-hidden">
+        <div class="px-5 py-4 bg-slate-900/80 border-b border-slate-800">
+          <h3 class="text-sm font-bold text-white flex items-center space-x-2">
+            <i class="fa-solid fa-list-ol text-amber-400"></i>
+            <span>Clasificación General (Top 10)</span>
+          </h3>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-900 text-slate-400 uppercase font-bold text-[10px]">
+              <tr>
+                <th class="px-4 py-3">Pos</th>
+                <th class="px-4 py-3">Alumno</th>
+                <th class="px-4 py-3">Grado/Grupo</th>
+                <th class="px-4 py-3">Prueba</th>
+                <th class="px-4 py-3 text-right">Resultado</th>
+                <th class="px-4 py-3 text-right">Puntos</th>
+              </tr>
+            </thead>
+            <tbody id="lbTableBody" class="divide-y divide-slate-800 text-slate-200">
+              <!-- Filas dinámicas -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- 4. VISTA: ADMINISTRACIÓN & CARGA MASIVA -->
+    <!-- ========================================== -->
+    <section id="view-admin" class="hidden space-y-6">
+      
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- MÓDULO CARGA MASIVA CSV -->
+        <div class="glass-card p-5 rounded-2xl border border-slate-800 space-y-4">
+          <h3 class="text-sm font-bold text-white flex items-center space-x-2">
+            <i class="fa-solid fa-file-csv text-emerald-400"></i>
+            <span>Carga Masiva de Alumnos e Inscripciones (CSV)</span>
+          </h3>
+          <p class="text-xs text-slate-400">
+            Formato de columnas esperado: <code class="bg-slate-900 text-amber-400 px-1 py-0.5 rounded">Nombre, Fecha_Nacimiento, Genero, Nivel, Grado, Grupo</code>
+          </p>
+
+          <div class="space-y-2">
+            <label class="block text-xs font-semibold text-slate-300">Pegar contenido CSV o ingresar filas:</label>
+            <textarea id="csvInputText" rows="6" placeholder="Mateo Hernández,2016-05-14,Varonil,Primaria,3°,A&#10;Camila Rodríguez,2016-08-22,Femenil,Primaria,3°,A" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-xs text-mono text-white focus:outline-none"></textarea>
+          </div>
+
+          <button type="button" onclick="handleCSVUpload()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-2.5 rounded-xl text-xs transition shadow-lg shadow-emerald-500/20 flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <span>Procesar Carga Masiva</span>
+          </button>
+        </div>
+
+        <!-- MÓDULO CONFIGURACIÓN DE BASE DE DATOS Y DATOS DEMO -->
+        <div class="glass-card p-5 rounded-2xl border border-slate-800 space-y-4">
+          <h3 class="text-sm font-bold text-white flex items-center space-x-2">
+            <i class="fa-solid fa-database text-amber-400"></i>
+            <span>Gestión de Base de Datos y Ciclos</span>
+          </h3>
+          
+          <div class="p-4 bg-slate-900 rounded-xl border border-slate-800 space-y-3">
+            <h4 class="text-xs font-bold text-slate-200">Inicialización de Hojas de Cálculo</h4>
+            <p class="text-xs text-slate-400">Crea las 6 pestañas estructuradas en Google Sheets (Usuarios, Alumnos, Inscripciones, Registros Antropométricos, Atletismo, Cualitativos).</p>
+            <button type="button" onclick="handleInitDatabase()" class="bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold px-4 py-2 rounded-xl text-xs border border-amber-500/30 transition flex items-center space-x-2">
+              <i class="fa-solid fa-gears"></i>
+              <span>Inicializar Pestañas de Sheets</span>
+            </button>
+          </div>
+
+          <div class="p-4 bg-slate-900 rounded-xl border border-slate-800 space-y-3">
+            <h4 class="text-xs font-bold text-slate-200">Generador de Datos de Demostración</h4>
+            <p class="text-xs text-slate-400">Popula inmediatamente la base de datos con cuentas de prueba (Admin, Docentes, Alumnos) y registros atléticos para consultar leaderboards.</p>
+            <button type="button" onclick="handleSeedDemo()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition flex items-center space-x-2 shadow-lg shadow-amber-500/20">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+              <span>Cargar Datos de Demostración</span>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-slate-900 border-t border-slate-800 py-4 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4">
+      <p>© 2026 Colegio Mexicano • TrackCM - Sistema de Gestión de Educación Física</p>
+    </div>
+  </footer>
+
+  <!-- ========================================== -->
+  <!-- MODAL: GENERADOR DE REPORTE OFICIAL SHEETS -->
+  <!-- ========================================== -->
+  <div id="reportModal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-card w-full max-w-xl p-6 rounded-2xl border border-slate-800 space-y-5 relative">
+      
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-extrabold text-white flex items-center space-x-2">
+          <i class="fa-solid fa-file-excel text-emerald-400"></i>
+          <span>Generar Formato Oficial Colegio Mexicano</span>
+        </h3>
+        <button onclick="closeReportModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <form id="formReportModal" onsubmit="handleGenerateReportSubmit(event)" class="space-y-4 text-xs">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Nivel</label>
+            <select id="modalNivel" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white">
+              <option value="Primaria" selected>Primaria</option>
+              <option value="Kínder">Kínder</option>
+              <option value="Secundaria">Secundaria</option>
+              <option value="Preparatoria">Preparatoria</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Grado y Grupo</label>
+            <div class="grid grid-cols-2 gap-2">
+              <select id="modalGrado" class="bg-slate-900 border border-slate-700 rounded-xl px-2 py-2 text-white">
+                <option value="1°">1° Año</option>
+                <option value="2°">2° Año</option>
+                <option value="3°">3° Año</option>
+                <option value="4°">4° Año</option>
+                <option value="5°">5° Año</option>
+                <option value="6°">6° Año</option>
+              </select>
+              <select id="modalGrupo" class="bg-slate-900 border border-slate-700 rounded-xl px-2 py-2 text-white">
+                <option value="A">"A"</option>
+                <option value="B">"B"</option>
+                <option value="C">"C"</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Mes de Evaluación</label>
+            <input type="text" id="modalMes" value="OCTUBRE" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white uppercase font-bold" required>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Ciclo Escolar</label>
+            <input type="text" id="modalCiclo" value="2023-2024" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white font-bold" required>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Docente Educación Física</label>
+          <input type="text" id="modalMaestroEF" value="L.G.A.D. CARLOS ANDREY MENDEZ LOPEZ" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white uppercase font-bold">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Maestra Español</label>
+            <input type="text" id="modalMaestroEspanol" value="PROFRA. CINTHYA KARINA ALDAPE ACUÑA" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white uppercase">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Maestra Inglés</label>
+            <input type="text" id="modalMaestroIngles" value="PROFRA. RAQUEL PINTOS HUERTA" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white uppercase">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 pt-2">
+          <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-extrabold py-2.5 rounded-xl transition shadow-lg shadow-emerald-500/20 flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-file-excel"></i>
+            <span>Generar en Google Sheets</span>
+          </button>
+          <button type="button" onclick="previewPrintableReport()" class="w-full bg-sky-500 hover:bg-sky-600 text-slate-950 font-extrabold py-2.5 rounded-xl transition shadow-lg shadow-sky-500/20 flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-print"></i>
+            <span>Ver Vista Previa Imprimible</span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- VISTA PREVIA IMPRIMIBLE (ESTILO IDÉNTICO A LA IMAGEN) -->
+  <div id="printReportContainer" class="hidden bg-white text-black p-8 font-sans">
+    <!-- Renderizado idéntico a la imagen -->
+  </div>
+
+  <?!= include('Scripts'); ?>
+</body>
+</html>
