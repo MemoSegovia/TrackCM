@@ -255,10 +255,9 @@ export default function AlumnoPage() {
                     </div>
                   ))}
                 </div>
-              )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
       </main>
     </div>
   );
