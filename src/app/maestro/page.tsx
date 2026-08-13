@@ -93,7 +93,7 @@ export default function MaestroPage() {
         </div>
 
         {/* Cascading Selectors */}
-        <StudentSelector onSelectStudent={handleSelectStudent} />
+        <StudentSelector onSelectStudent={handleSelectStudent} user={user} />
 
         {/* Module Selector Tabs */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
+import ExportPdfButton from '@/components/ExportPdfButton';
 import { UserSession } from '@/lib/types';
 import { Award, Trophy, Medal, Filter, Flame, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -79,9 +80,17 @@ export default function LeaderboardPage() {
               Colegio Mexicano • Mejores Marcas Top 3 por Grupo, Nivel y Prueba Deportiva
             </p>
           </div>
-          <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5" /> Ranking Oficial
-          </span>
+          <div className="flex items-center gap-2">
+            <ExportPdfButton
+              elementId="leaderboard-pdf-report"
+              fileName="Leaderboards_Top3_Colegio_Mexicano.pdf"
+              title="Tabla de Posiciones Top 3"
+              buttonText="PDF Ranking"
+            />
+            <span className="text-xs font-bold px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" /> Ranking Oficial
+            </span>
+          </div>
         </div>
 
         {/* Filter Controls Bar */}
@@ -100,7 +109,9 @@ export default function LeaderboardPage() {
                 className="bg-slate-950 text-xs font-semibold text-slate-200 rounded-xl px-3 py-2 border border-slate-800 focus:outline-none focus:border-amber-400"
               >
                 <option value="Todos">Todos los Niveles</option>
-                <option value="Primaria">Primaria</option>
+                <option value="Kinder">Kinder</option>
+                <option value="Primaria Menor">Primaria Menor</option>
+                <option value="Primaria Mayor">Primaria Mayor</option>
                 <option value="Secundaria">Secundaria</option>
                 <option value="Preparatoria">Preparatoria</option>
               </select>
@@ -149,7 +160,7 @@ export default function LeaderboardPage() {
             No se encontraron marcas para el filtro seleccionado.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div id="leaderboard-pdf-report" className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {Object.entries(leaderboards).map(([pruebaName, top3List]) => (
               <div
                 key={pruebaName}

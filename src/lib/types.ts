@@ -1,4 +1,14 @@
-export type RolUsuario = 'Maestro' | 'Alumno';
+export type RolUsuario = 'Maestro' | 'Alumno' | 'Administrador';
+
+export const NIVELES_ESCOLARES_OFICIALES = [
+  'Kinder',
+  'Primaria Menor',
+  'Primaria Mayor',
+  'Secundaria',
+  'Preparatoria',
+] as const;
+
+export type NivelEscolar = typeof NIVELES_ESCOLARES_OFICIALES[number];
 
 export interface Usuario {
   ID_Usuario: string;
@@ -6,7 +16,7 @@ export interface Usuario {
   Correo: string;
   Password?: string;
   Rol: RolUsuario;
-  Nivel_Asignado: string;
+  Nivel_Asignado: string; // 'Kinder', 'Primaria Menor', 'Primaria Mayor', 'Secundaria', 'Preparatoria', 'Todos'
 }
 
 export interface AlumnoInscrito {
@@ -14,7 +24,7 @@ export interface AlumnoInscrito {
   Nombre_Completo: string;
   Fecha_Nacimiento: string;
   Genero: 'M' | 'F' | string;
-  Nivel: string; // Primaria, Secundaria, Preparatoria
+  Nivel: string; // Kinder, Primaria Menor, Primaria Mayor, Secundaria, Preparatoria
   Grado: string; // 1, 2, 3...
   Grupo: string; // A, B, C...
   Ciclo_Escolar: string; // ej. 2026-2027
@@ -38,9 +48,9 @@ export interface RegistroAtletismo {
   ID_Alumno: string;
   Ciclo_Escolar: string;
   ID_Maestro: string;
-  Prueba: string; // 100m, 400m, 800m, Salto de Longitud, Lanzamiento de Bala, etc.
-  Resultado_Principal: string; // ej. "12.45 s", "4.85 m", "9.20 m"
-  Detalle_JSON_Vueltas?: string; // JSON string for laps or attempts breakdown
+  Prueba: string; // 100m Velocidad, Salto de Longitud, etc.
+  Resultado_Principal: string; // ej. "12.45 s", "4.85 m"
+  Detalle_JSON_Vueltas?: string;
   Puntos?: number;
 }
 
@@ -50,8 +60,8 @@ export interface RegistroCualitativo {
   ID_Alumno: string;
   Ciclo_Escolar: string;
   ID_Maestro: string;
-  Deporte_o_Prueba: string; // Básquetbol, Fútbol, Voleibol, Trabajo en equipo
-  Calificacion: string; // Excelente, Muy Bueno, En Proceso, 9.5, etc.
+  Deporte_o_Prueba: string;
+  Calificacion: string;
 }
 
 export interface UserSession {
@@ -62,9 +72,28 @@ export interface UserSession {
   nivelAsignado?: string;
 }
 
-export interface MetricSummary {
-  totalAlumnos: number;
+export interface MultiStudentRunner {
+  student: AlumnoInscrito;
+  lane: number;
+  finishTimeMs?: number;
+  finished: boolean;
+}
+
+export interface AdminTeacherActivity {
+  idMaestro: string;
+  nombreMaestro: string;
   totalRegistros: number;
-  promedioIMC: number;
-  mejorTiempo100m?: string;
+  totalAntropometricos: number;
+  totalAtletismo: number;
+  totalCualitativos: number;
+}
+
+export interface AdminMetrics {
+  totalAlumnos: number;
+  totalMaestros: number;
+  totalRegistrosAntro: number;
+  totalRegistrosAtl: number;
+  totalRegistrosCual: number;
+  actividadMaestros: AdminTeacherActivity[];
+  alumnosPorNivel: Record<string, number>;
 }

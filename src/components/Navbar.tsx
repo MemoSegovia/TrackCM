@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Activity, Award, UserCheck, LogOut, ShieldCheck, Dumbbell } from 'lucide-react';
+import { Activity, Award, UserCheck, LogOut, ShieldCheck, Dumbbell, BarChart3 } from 'lucide-react';
 import { UserSession } from '@/lib/types';
 
 interface NavbarProps {
@@ -20,6 +20,10 @@ export default function Navbar({ user }: NavbarProps) {
     }
     router.push('/login');
   };
+
+  const rolLower = user?.rol?.toLowerCase() || '';
+  const isTeacher = rolLower === 'maestro' || rolLower === 'profesor';
+  const isAdmin = rolLower === 'administrador' || rolLower === 'admin';
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur-md bg-slate-900/90 border-b border-slate-800 text-white shadow-lg">
@@ -42,7 +46,21 @@ export default function Navbar({ user }: NavbarProps) {
 
           {/* Navigation Links */}
           <nav className="hidden md:flex items-center gap-1">
-            {(user?.rol?.toLowerCase() === 'maestro' || user?.rol?.toLowerCase() === 'profesor') && (
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  pathname === '/admin'
+                    ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/40'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                <BarChart3 className="w-4 h-4 text-indigo-400" />
+                Dashboard Admin
+              </Link>
+            )}
+
+            {(isTeacher || isAdmin) && (
               <Link
                 href="/maestro"
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -113,33 +131,47 @@ export default function Navbar({ user }: NavbarProps) {
 
         {/* Mobile Navigation bar */}
         <div className="flex md:hidden items-center justify-around py-2 border-t border-slate-800 text-xs">
-          {(user?.rol?.toLowerCase() === 'maestro' || user?.rol?.toLowerCase() === 'profesor') && (
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className={`flex items-center gap-1 px-2 py-1 rounded-md ${
+                pathname === '/admin' ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-400'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              Admin
+            </Link>
+          )}
+
+          {(isTeacher || isAdmin) && (
             <Link
               href="/maestro"
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-md ${
+              className={`flex items-center gap-1 px-2 py-1 rounded-md ${
                 pathname === '/maestro' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400'
               }`}
             >
-              <UserCheck className="w-4 h-4" />
+              <UserCheck className="w-3.5 h-3.5" />
               Cancha
             </Link>
           )}
+
           <Link
             href="/leaderboard"
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-md ${
+            className={`flex items-center gap-1 px-2 py-1 rounded-md ${
               pathname === '/leaderboard' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400'
             }`}
           >
-            <Award className="w-4 h-4" />
+            <Award className="w-3.5 h-3.5" />
             Ranking
           </Link>
+
           <Link
             href="/alumno"
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-md ${
+            className={`flex items-center gap-1 px-2 py-1 rounded-md ${
               pathname === '/alumno' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400'
             }`}
           >
-            <Activity className="w-4 h-4" />
+            <Activity className="w-3.5 h-3.5" />
             Historial
           </Link>
         </div>

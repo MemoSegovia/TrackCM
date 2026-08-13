@@ -37,7 +37,9 @@ export default function LoginPage() {
         }
 
         const rolLower = data.user.rol?.toLowerCase() || '';
-        if (rolLower === 'maestro' || rolLower === 'profesor') {
+        if (rolLower === 'administrador' || rolLower === 'admin') {
+          router.push('/admin');
+        } else if (rolLower === 'maestro' || rolLower === 'profesor') {
           router.push('/maestro');
         } else {
           router.push('/alumno');

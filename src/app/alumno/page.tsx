@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import PerformanceCharts from '@/components/PerformanceCharts';
+import ExportPdfButton from '@/components/ExportPdfButton';
 import { UserSession, AlumnoInscrito, RegistroAntropometrico, RegistroAtletismo, RegistroCualitativo } from '@/lib/types';
 import { Search, Activity, Calendar, Trophy, HeartPulse, Award, UserCheck, Scale } from 'lucide-react';
 import { calculateIMC } from '@/lib/utils';
@@ -86,31 +87,43 @@ export default function AlumnoPage() {
               <p className="text-xs text-slate-400">Ingresa tu ID de Alumno o Correo Institucional</p>
             </div>
 
-            {/* Search Input Form */}
-            <form onSubmit={handleSearchSubmit} className="flex gap-2 max-w-md w-full">
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                <input
-                  type="text"
-                  placeholder="ID (ej. ALU-2026-001) o Correo..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-slate-950 text-slate-100 text-xs rounded-xl pl-9 pr-3 py-2.5 border border-slate-700 focus:outline-none focus:border-cyan-500"
+            {/* Search Input Form & Export PDF */}
+            <div className="flex flex-col sm:flex-row items-center gap-2 max-w-lg w-full">
+              <form onSubmit={handleSearchSubmit} className="flex gap-2 flex-1 w-full">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                  <input
+                    type="text"
+                    placeholder="ID (ej. ALU-2026-001) o Correo..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full bg-slate-950 text-slate-100 text-xs rounded-xl pl-9 pr-3 py-2.5 border border-slate-700 focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-4 py-2.5 rounded-xl font-bold text-xs bg-cyan-500 hover:bg-cyan-600 text-slate-950 transition-all shadow-md shadow-cyan-500/20 flex items-center gap-1.5"
+                >
+                  {loading ? 'Buscando...' : 'Buscar'}
+                </button>
+              </form>
+
+              {student && (
+                <ExportPdfButton
+                  elementId="student-full-report"
+                  fileName={`Historial_${student.Nombre_Completo.replace(/\s+/g, '_')}.pdf`}
+                  title={`Historial de ${student.Nombre_Completo}`}
+                  buttonText="PDF"
                 />
-              </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-4 py-2.5 rounded-xl font-bold text-xs bg-cyan-500 hover:bg-cyan-600 text-slate-950 transition-all shadow-md shadow-cyan-500/20 flex items-center gap-1.5"
-              >
-                {loading ? 'Buscando...' : 'Buscar'}
-              </button>
-            </form>
+              )}
+            </div>
           </div>
 
           {/* Student Profile Header Banner */}
           {student && (
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2">
+            <div id="student-full-report" className="space-y-6 pt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div className="sm:col-span-2 bg-slate-950 border border-slate-800 rounded-xl p-4 flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 text-cyan-400 font-extrabold text-xl flex items-center justify-center">
                   {student.Nombre_Completo.charAt(0)}

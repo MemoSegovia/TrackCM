@@ -1,15 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { AlumnoInscrito } from '@/lib/types';
-import { Filter, User, Layers, GraduationCap, Calendar, CheckCircle2 } from 'lucide-react';
+import { AlumnoInscrito, UserSession, NIVELES_ESCOLARES_OFICIALES } from '@/lib/types';
+import { Filter, User, Layers, GraduationCap, Calendar, CheckCircle2, Lock } from 'lucide-react';
 
 interface StudentSelectorProps {
   onSelectStudent: (student: AlumnoInscrito | null, ciclo: string) => void;
+  user?: UserSession | null;
   selectedStudentId?: string;
 }
 
-export default function StudentSelector({ onSelectStudent, selectedStudentId }: StudentSelectorProps) {
+export default function StudentSelector({ onSelectStudent, user, selectedStudentId }: StudentSelectorProps) {
   const [alumnos, setAlumnos] = useState<AlumnoInscrito[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -26,6 +27,15 @@ export default function StudentSelector({ onSelectStudent, selectedStudentId }: 
   const [grados, setGrados] = useState<string[]>([]);
   const [grupos, setGrupos] = useState<string[]>([]);
   const [filteredAlumnos, setFilteredAlumnos] = useState<AlumnoInscrito[]>([]);
+
+  // Check if teacher is restricted to a specific level
+  const userRoleLower = user?.rol?.toLowerCase() || '';
+  const assignedLevel = user?.nivelAsignado;
+  const isRestrictedTeacher =
+    userRoleLower === 'maestro' &&
+    assignedLevel &&
+    assignedLevel !== 'Todos' &&
+    assignedLevel !== 'Administrador';
 
   useEffect(() => {
     async function loadData() {
@@ -50,27 +60,43 @@ export default function StudentSelector({ onSelectStudent, selectedStudentId }: 
     loadData();
   }, []);
 
-  // Update levels available for chosen Ciclo
+  // Update levels available for chosen Ciclo (and scoped to teacher if restricted)
   useEffect(() => {
     const list = alumnos.filter((a) => a.Ciclo_Escolar === selectedCiclo);
-    const availableNiveles = Array.from(new Set(list.map((a) => a.Nivel))).filter(Boolean);
-    setNiveles(availableNiveles);
-    
-    if (availableNiveles.length > 0 && (!selectedNivel || !availableNiveles.includes(selectedNivel))) {
-      setSelectedNivel(availableNiveles[0]);
+    let availableNiveles = Array.from(new Set(list.map((a) => a.Nivel))).filter(Boolean);
+
+    // Filter to official levels if list is empty or fallback
+    if (availableNiveles.length === 0) {
+      availableNiveles = [...NIVELES_ESCOLARES_OFICIALES];
     }
-  }, [selectedCiclo, alumnos]);
+
+    if (isRestrictedTeacher && assignedLevel) {
+      // Teacher can ONLY select their assigned level
+      availableNiveles = availableNiveles.filter((n) => n.toLowerCase() === assignedLevel.toLowerCase());
+      if (availableNiveles.length === 0) {
+        availableNiveles = [assignedLevel];
+      }
+      setSelectedNivel(assignedLevel);
+    } else {
+      setNiveles(availableNiveles);
+      if (availableNiveles.length > 0 && (!selectedNivel || !availableNiveles.includes(selectedNivel))) {
+        setSelectedNivel(availableNiveles[0]);
+      }
+    }
+  }, [selectedCiclo, alumnos, isRestrictedTeacher, assignedLevel]);
 
   // Update grades available for chosen Ciclo + Nivel
   useEffect(() => {
     const list = alumnos.filter(
-      (a) => a.Ciclo_Escolar === selectedCiclo && a.Nivel === selectedNivel
+      (a) => a.Ciclo_Escolar === selectedCiclo && a.Nivel.toLowerCase() === selectedNivel.toLowerCase()
     );
     const availableGrados = Array.from(new Set(list.map((a) => a.Grado))).filter(Boolean);
-    setGrados(availableGrados);
+    setGrados(availableGrados.length > 0 ? availableGrados : ['1', '2', '3', '4', '5', '6']);
 
     if (availableGrados.length > 0 && (!selectedGrado || !availableGrados.includes(selectedGrado))) {
       setSelectedGrado(availableGrados[0]);
+    } else if (availableGrados.length === 0) {
+      setSelectedGrado('1');
     }
   }, [selectedCiclo, selectedNivel, alumnos]);
 
@@ -79,14 +105,16 @@ export default function StudentSelector({ onSelectStudent, selectedStudentId }: 
     const list = alumnos.filter(
       (a) =>
         a.Ciclo_Escolar === selectedCiclo &&
-        a.Nivel === selectedNivel &&
+        a.Nivel.toLowerCase() === selectedNivel.toLowerCase() &&
         a.Grado === selectedGrado
     );
     const availableGrupos = Array.from(new Set(list.map((a) => a.Grupo))).filter(Boolean);
-    setGrupos(availableGrupos);
+    setGrupos(availableGrupos.length > 0 ? availableGrupos : ['A', 'B', 'C']);
 
     if (availableGrupos.length > 0 && (!selectedGrupo || !availableGrupos.includes(selectedGrupo))) {
       setSelectedGrupo(availableGrupos[0]);
+    } else if (availableGrupos.length === 0) {
+      setSelectedGrupo('A');
     }
   }, [selectedCiclo, selectedNivel, selectedGrado, alumnos]);
 
@@ -95,14 +123,13 @@ export default function StudentSelector({ onSelectStudent, selectedStudentId }: 
     const list = alumnos.filter(
       (a) =>
         a.Ciclo_Escolar === selectedCiclo &&
-        a.Nivel === selectedNivel &&
+        a.Nivel.toLowerCase() === selectedNivel.toLowerCase() &&
         a.Grado === selectedGrado &&
         a.Grupo === selectedGrupo
     );
     setFilteredAlumnos(list);
 
     if (list.length > 0) {
-      // Auto pick first student or maintain selection
       const exists = list.find((a) => a.ID_Alumno === selectedAlumnoId);
       const chosen = exists ? exists : list[0];
       setSelectedAlumnoId(chosen.ID_Alumno);
@@ -130,8 +157,13 @@ export default function StudentSelector({ onSelectStudent, selectedStudentId }: 
             Selectores de Alumnos (Filtro en Cascada)
           </h2>
         </div>
-        {loading && (
-          <span className="text-xs text-emerald-400 animate-pulse">Cargando datos...</span>
+
+        {isRestrictedTeacher ? (
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1">
+            <Lock className="w-3 h-3" /> Nivel Asignado: {assignedLevel}
+          </span>
+        ) : (
+          loading && <span className="text-xs text-emerald-400 animate-pulse">Cargando lista...</span>
         )}
       </div>
 
@@ -155,15 +187,20 @@ export default function StudentSelector({ onSelectStudent, selectedStudentId }: 
           </select>
         </div>
 
-        {/* Nivel */}
+        {/* Nivel (Restricted if teacher assigned specific level) */}
         <div>
           <label className="block text-xs font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
-            <GraduationCap className="w-3.5 h-3.5 text-slate-400" /> Nivel
+            <GraduationCap className="w-3.5 h-3.5 text-slate-400" /> Nivel Escolar
           </label>
           <select
             value={selectedNivel}
+            disabled={isRestrictedTeacher}
             onChange={(e) => setSelectedNivel(e.target.value)}
-            className="w-full bg-slate-800/80 text-slate-100 text-sm rounded-xl px-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 transition-colors"
+            className={`w-full text-sm rounded-xl px-3 py-2.5 border transition-colors ${
+              isRestrictedTeacher
+                ? 'bg-slate-950 text-amber-400 font-bold border-amber-500/40 cursor-not-allowed'
+                : 'bg-slate-800/80 text-slate-100 border-slate-700 focus:outline-none focus:border-emerald-500'
+            }`}
           >
             {niveles.map((n) => (
               <option key={n} value={n}>
@@ -213,7 +250,7 @@ export default function StudentSelector({ onSelectStudent, selectedStudentId }: 
       {/* Main Student Select */}
       <div>
         <label className="block text-xs font-semibold text-slate-300 mb-1">
-          Alumno Seleccionado ({filteredAlumnos.length} disponibles en este grupo)
+          Alumno Seleccionado ({filteredAlumnos.length} en este grupo)
         </label>
         <select
           value={selectedAlumnoId}
