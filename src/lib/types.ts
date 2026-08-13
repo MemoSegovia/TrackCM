@@ -34,8 +34,10 @@ export interface RegistroAntropometrico {
   ID_Registro: string;
   Fecha: string;
   ID_Alumno: string;
+  Nombre_Alumno?: string;
   Ciclo_Escolar: string;
   ID_Maestro: string;
+  Nombre_Maestro?: string;
   Edad: number;
   Peso_kg: number;
   Estatura_cm: number;
@@ -46,8 +48,10 @@ export interface RegistroAtletismo {
   ID_Registro: string;
   Fecha: string;
   ID_Alumno: string;
+  Nombre_Alumno?: string;
   Ciclo_Escolar: string;
   ID_Maestro: string;
+  Nombre_Maestro?: string;
   Prueba: string; // 100m Velocidad, Salto de Longitud, etc.
   Resultado_Principal: string; // ej. "12.45 s", "4.85 m"
   Detalle_JSON_Vueltas?: string;
@@ -58,8 +62,10 @@ export interface RegistroCualitativo {
   ID_Registro: string;
   Fecha: string;
   ID_Alumno: string;
+  Nombre_Alumno?: string;
   Ciclo_Escolar: string;
   ID_Maestro: string;
+  Nombre_Maestro?: string;
   Deporte_o_Prueba: string;
   Calificacion: string;
 }

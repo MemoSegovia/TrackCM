@@ -113,23 +113,28 @@ export async function getRegistrosAntropometricos(): Promise<RegistroAntropometr
   try {
     const res = await client.sheets.spreadsheets.values.get({
       spreadsheetId: client.spreadsheetId,
-      range: 'Registros_Antropometricos!A2:I',
+      range: 'Registros_Antropometricos!A2:Z',
     });
 
     const rows = res.data.values;
     if (!rows || rows.length === 0) return MOCK_ANTROPOMETRICOS;
 
-    return rows.map((r) => ({
-      ID_Registro: r[0] || '',
-      Fecha: r[1] || '',
-      ID_Alumno: r[2] || '',
-      Ciclo_Escolar: r[3] || '',
-      ID_Maestro: r[4] || '',
-      Edad: parseFloat(r[5]) || 0,
-      Peso_kg: parseFloat(r[6]) || 0,
-      Estatura_cm: parseFloat(r[7]) || 0,
-      IMC: parseFloat(r[8]) || 0,
-    }));
+    return rows.map((r) => {
+      const isNewSchema = r.length >= 11;
+      return {
+        ID_Registro: r[0] || '',
+        Fecha: r[1] || '',
+        ID_Alumno: r[2] || '',
+        Nombre_Alumno: isNewSchema ? r[3] : '',
+        Ciclo_Escolar: isNewSchema ? r[4] : r[3] || '',
+        ID_Maestro: isNewSchema ? r[5] : r[4] || '',
+        Nombre_Maestro: isNewSchema ? r[6] : '',
+        Edad: parseFloat(isNewSchema ? r[7] : r[5]) || 0,
+        Peso_kg: parseFloat(isNewSchema ? r[8] : r[6]) || 0,
+        Estatura_cm: parseFloat(isNewSchema ? r[9] : r[7]) || 0,
+        IMC: parseFloat(isNewSchema ? r[10] : r[8]) || 0,
+      };
+    });
   } catch (err) {
     console.error('Error fetching Registros_Antropometricos:', err);
     return MOCK_ANTROPOMETRICOS;
@@ -143,23 +148,28 @@ export async function getRegistrosAtletismo(): Promise<RegistroAtletismo[]> {
   try {
     const res = await client.sheets.spreadsheets.values.get({
       spreadsheetId: client.spreadsheetId,
-      range: 'Registros_Atletismo!A2:I',
+      range: 'Registros_Atletismo!A2:Z',
     });
 
     const rows = res.data.values;
     if (!rows || rows.length === 0) return MOCK_ATLETISMO;
 
-    return rows.map((r) => ({
-      ID_Registro: r[0] || '',
-      Fecha: r[1] || '',
-      ID_Alumno: r[2] || '',
-      Ciclo_Escolar: r[3] || '',
-      ID_Maestro: r[4] || '',
-      Prueba: r[5] || '',
-      Resultado_Principal: r[6] || '',
-      Detalle_JSON_Vueltas: r[7] || '',
-      Puntos: parseFloat(r[8]) || 0,
-    }));
+    return rows.map((r) => {
+      const isNewSchema = r.length >= 11;
+      return {
+        ID_Registro: r[0] || '',
+        Fecha: r[1] || '',
+        ID_Alumno: r[2] || '',
+        Nombre_Alumno: isNewSchema ? r[3] : '',
+        Ciclo_Escolar: isNewSchema ? r[4] : r[3] || '',
+        ID_Maestro: isNewSchema ? r[5] : r[4] || '',
+        Nombre_Maestro: isNewSchema ? r[6] : '',
+        Prueba: isNewSchema ? r[7] : r[5] || '',
+        Resultado_Principal: isNewSchema ? r[8] : r[6] || '',
+        Detalle_JSON_Vueltas: isNewSchema ? r[9] : r[7] || '',
+        Puntos: parseFloat(isNewSchema ? r[10] : r[8]) || 0,
+      };
+    });
   } catch (err) {
     console.error('Error fetching Registros_Atletismo:', err);
     return MOCK_ATLETISMO;
@@ -173,21 +183,26 @@ export async function getRegistrosCualitativos(): Promise<RegistroCualitativo[]>
   try {
     const res = await client.sheets.spreadsheets.values.get({
       spreadsheetId: client.spreadsheetId,
-      range: 'Registros_Cualitativos!A2:G',
+      range: 'Registros_Cualitativos!A2:Z',
     });
 
     const rows = res.data.values;
     if (!rows || rows.length === 0) return MOCK_CUALITATIVOS;
 
-    return rows.map((r) => ({
-      ID_Registro: r[0] || '',
-      Fecha: r[1] || '',
-      ID_Alumno: r[2] || '',
-      Ciclo_Escolar: r[3] || '',
-      ID_Maestro: r[4] || '',
-      Deporte_o_Prueba: r[5] || '',
-      Calificacion: r[6] || '',
-    }));
+    return rows.map((r) => {
+      const isNewSchema = r.length >= 9;
+      return {
+        ID_Registro: r[0] || '',
+        Fecha: r[1] || '',
+        ID_Alumno: r[2] || '',
+        Nombre_Alumno: isNewSchema ? r[3] : '',
+        Ciclo_Escolar: isNewSchema ? r[4] : r[3] || '',
+        ID_Maestro: isNewSchema ? r[5] : r[4] || '',
+        Nombre_Maestro: isNewSchema ? r[6] : '',
+        Deporte_o_Prueba: isNewSchema ? r[7] : r[5] || '',
+        Calificacion: isNewSchema ? r[8] : r[6] || '',
+      };
+    });
   } catch (err) {
     console.error('Error fetching Registros_Cualitativos:', err);
     return MOCK_CUALITATIVOS;
@@ -208,15 +223,17 @@ export async function addRegistroAntropometrico(data: RegistroAntropometrico): P
   try {
     await client.sheets.spreadsheets.values.append({
       spreadsheetId: client.spreadsheetId,
-      range: 'Registros_Antropometricos!A:I',
+      range: 'Registros_Antropometricos!A:K',
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values: [[
           data.ID_Registro,
           data.Fecha,
           data.ID_Alumno,
+          data.Nombre_Alumno || '',
           data.Ciclo_Escolar,
           data.ID_Maestro,
+          data.Nombre_Maestro || '',
           data.Edad,
           data.Peso_kg,
           data.Estatura_cm,
@@ -242,15 +259,17 @@ export async function addRegistroAtletismo(data: RegistroAtletismo): Promise<boo
   try {
     await client.sheets.spreadsheets.values.append({
       spreadsheetId: client.spreadsheetId,
-      range: 'Registros_Atletismo!A:I',
+      range: 'Registros_Atletismo!A:K',
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values: [[
           data.ID_Registro,
           data.Fecha,
           data.ID_Alumno,
+          data.Nombre_Alumno || '',
           data.Ciclo_Escolar,
           data.ID_Maestro,
+          data.Nombre_Maestro || '',
           data.Prueba,
           data.Resultado_Principal,
           data.Detalle_JSON_Vueltas || '',
@@ -276,15 +295,17 @@ export async function addRegistroCualitativo(data: RegistroCualitativo): Promise
   try {
     await client.sheets.spreadsheets.values.append({
       spreadsheetId: client.spreadsheetId,
-      range: 'Registros_Cualitativos!A:G',
+      range: 'Registros_Cualitativos!A:I',
       valueInputOption: 'USER_ENTERED',
       requestBody: {
         values: [[
           data.ID_Registro,
           data.Fecha,
           data.ID_Alumno,
+          data.Nombre_Alumno || '',
           data.Ciclo_Escolar,
           data.ID_Maestro,
+          data.Nombre_Maestro || '',
           data.Deporte_o_Prueba,
           data.Calificacion,
         ]],
