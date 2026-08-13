@@ -21,20 +21,34 @@ export async function GET(request: Request) {
     let targetStudent = null;
 
     if (studentIdParam) {
-      targetStudent = alumnos.find((a) => a.ID_Alumno === studentIdParam);
+      const q = studentIdParam.trim().toLowerCase();
+      targetStudent =
+        alumnos.find(
+          (a) =>
+            a.ID_Alumno.toLowerCase() === q ||
+            a.Nombre_Completo.toLowerCase().includes(q)
+        ) || null;
     } else if (emailParam) {
       const emailClean = emailParam.trim().toLowerCase();
       const userMatch = usuarios.find((u) => u.Correo.toLowerCase() === emailClean);
-      if (userMatch) {
-        // Try matching by name or email
-        targetStudent = alumnos.find(
-          (a) => a.Nombre_Completo.toLowerCase() === userMatch.Nombre.toLowerCase()
-        ) || alumnos[0];
+      if (userMatch && userMatch.Rol?.toLowerCase() === 'alumno') {
+        targetStudent =
+          alumnos.find(
+            (a) => a.Nombre_Completo.toLowerCase() === userMatch.Nombre.toLowerCase()
+          ) || null;
       }
     }
 
-    if (!targetStudent && alumnos.length > 0) {
-      targetStudent = alumnos[0]; // fallback
+    if (!targetStudent) {
+      return NextResponse.json({
+        success: true,
+        alumno: null,
+        historial: {
+          antropometrico: [],
+          atletismo: [],
+          cualitativo: [],
+        },
+      });
     }
 
     const [antropometricos, atletismo, cualitativos] = await Promise.all([

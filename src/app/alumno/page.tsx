@@ -120,6 +120,19 @@ export default function AlumnoPage() {
             </div>
           </div>
 
+          {/* Empty Search State */}
+          {!student && (
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-10 text-center space-y-3 shadow-xl my-4">
+              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-400 mx-auto flex items-center justify-center font-bold">
+                <Search className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-white">Consulta de Historial de Alumno</h3>
+              <p className="text-xs text-slate-400 max-w-md mx-auto">
+                Ingresa el ID del Alumno, Nombre o Correo Institucional en el buscador superior para consultar su historial de atletismo, marcas de IMC y evaluaciones.
+              </p>
+            </div>
+          )}
+
           {/* Student Profile Header Banner & Full Report Container */}
           {student && (
             <div id="student-full-report" className="space-y-6 pt-2">
