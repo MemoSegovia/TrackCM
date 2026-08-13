@@ -32,7 +32,8 @@ export default function MaestroPage() {
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
-          if (parsed.rol !== 'Maestro') {
+          const rolLower = parsed.rol?.toLowerCase() || '';
+          if (rolLower !== 'maestro' && rolLower !== 'profesor') {
             router.push('/alumno');
           } else {
             setUser(parsed);

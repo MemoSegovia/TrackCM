@@ -42,7 +42,7 @@ export default function Navbar({ user }: NavbarProps) {
 
           {/* Navigation Links */}
           <nav className="hidden md:flex items-center gap-1">
-            {user?.rol === 'Maestro' && (
+            {(user?.rol?.toLowerCase() === 'maestro' || user?.rol?.toLowerCase() === 'profesor') && (
               <Link
                 href="/maestro"
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -113,7 +113,7 @@ export default function Navbar({ user }: NavbarProps) {
 
         {/* Mobile Navigation bar */}
         <div className="flex md:hidden items-center justify-around py-2 border-t border-slate-800 text-xs">
-          {user?.rol === 'Maestro' && (
+          {(user?.rol?.toLowerCase() === 'maestro' || user?.rol?.toLowerCase() === 'profesor') && (
             <Link
               href="/maestro"
               className={`flex items-center gap-1 px-3 py-1.5 rounded-md ${

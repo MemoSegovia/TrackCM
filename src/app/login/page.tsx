@@ -36,7 +36,8 @@ export default function LoginPage() {
           localStorage.setItem('trackcm_user', JSON.stringify(data.user));
         }
 
-        if (data.user.rol === 'Maestro') {
+        const rolLower = data.user.rol?.toLowerCase() || '';
+        if (rolLower === 'maestro' || rolLower === 'profesor') {
           router.push('/maestro');
         } else {
           router.push('/alumno');
