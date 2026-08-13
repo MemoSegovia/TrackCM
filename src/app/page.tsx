@@ -166,7 +166,7 @@ export default function Home() {
       </main>
 
       <footer className="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
-        © 2026 Colegio Mexicano — TrackCM Educación Física. Desarrollado para Vercel & Google Sheets API.
+        © 2026 TrackCM — Colegio Mexicano. Desarrollado por Soporte de Sistemas.
       </footer>
     </div>
   );

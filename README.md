@@ -113,4 +113,4 @@ git push -u origin main
 
 ---
 
-© 2026 Colegio Mexicano. Desarrollado para el Departamento de Educación Física.
+© 2026 TrackCM — Colegio Mexicano. Desarrollado por Soporte de Sistemas.
