@@ -72,12 +72,13 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
     }
 
     if (isRestrictedTeacher && assignedLevel) {
-      // Teacher can ONLY select their assigned level
-      availableNiveles = availableNiveles.filter((n) => n.toLowerCase() === assignedLevel.toLowerCase());
-      if (availableNiveles.length === 0) {
-        availableNiveles = [assignedLevel];
-      }
-      setSelectedNivel(assignedLevel);
+      const cleanAssigned = assignedLevel.trim().toLowerCase();
+      const officialMatch =
+        NIVELES_ESCOLARES_OFICIALES.find((n) => n.toLowerCase() === cleanAssigned) ||
+        assignedLevel;
+
+      setNiveles([officialMatch]);
+      setSelectedNivel(officialMatch);
     } else {
       setNiveles(availableNiveles);
       if (availableNiveles.length > 0 && (!selectedNivel || !availableNiveles.includes(selectedNivel))) {
@@ -188,27 +189,29 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
           </select>
         </div>
 
-        {/* Nivel (Restricted if teacher assigned specific level) */}
+        {/* Nivel Escolar (Fixed for restricted teacher, dropdown for admin) */}
         <div>
           <label className="block text-xs font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
             <GraduationCap className="w-3.5 h-3.5 text-slate-400" /> Nivel Escolar
           </label>
-          <select
-            value={selectedNivel}
-            disabled={isRestrictedTeacher}
-            onChange={(e) => setSelectedNivel(e.target.value)}
-            className={`w-full text-sm rounded-xl px-3 py-2.5 border transition-colors ${
-              isRestrictedTeacher
-                ? 'bg-slate-950 text-amber-400 font-bold border-amber-500/40 cursor-not-allowed'
-                : 'bg-slate-800/80 text-slate-100 border-slate-700 focus:outline-none focus:border-emerald-500'
-            }`}
-          >
-            {niveles.map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
+          {isRestrictedTeacher ? (
+            <div className="w-full bg-slate-950 text-amber-400 font-bold text-sm rounded-xl px-3.5 py-2.5 border border-amber-500/40 flex items-center justify-between shadow-inner select-none cursor-default">
+              <span>{selectedNivel || assignedLevel}</span>
+              <Lock className="w-3.5 h-3.5 text-amber-400 opacity-80" />
+            </div>
+          ) : (
+            <select
+              value={selectedNivel}
+              onChange={(e) => setSelectedNivel(e.target.value)}
+              className="w-full bg-slate-800/80 text-slate-100 text-sm rounded-xl px-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 transition-colors"
+            >
+              {niveles.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* Grado */}
