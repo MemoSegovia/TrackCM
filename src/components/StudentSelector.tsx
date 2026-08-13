@@ -131,11 +131,9 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
     );
     setFilteredAlumnos(list);
 
-    if (list.length > 0) {
-      const exists = list.find((a) => a.ID_Alumno === selectedAlumnoId);
-      const chosen = exists ? exists : list[0];
-      setSelectedAlumnoId(chosen.ID_Alumno);
-      onSelectStudent(chosen, selectedCiclo);
+    const exists = list.find((a) => a.ID_Alumno === selectedAlumnoId);
+    if (exists) {
+      onSelectStudent(exists, selectedCiclo);
     } else {
       setSelectedAlumnoId('');
       onSelectStudent(null, selectedCiclo);
@@ -261,15 +259,14 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
           onChange={(e) => handleStudentChange(e.target.value)}
           className="w-full bg-slate-950 text-emerald-400 font-bold text-base rounded-xl px-4 py-3 border-2 border-emerald-500/40 focus:outline-none focus:border-emerald-400 transition-colors shadow-inner"
         >
-          {filteredAlumnos.length === 0 ? (
-            <option value="">No hay alumnos registrados en este grupo</option>
-          ) : (
-            filteredAlumnos.map((a) => (
-              <option key={a.ID_Alumno} value={a.ID_Alumno} className="bg-slate-900 text-white">
-                {a.Nombre_Completo} — [{a.ID_Alumno}]
-              </option>
-            ))
-          )}
+          <option value="" className="bg-slate-900 text-slate-400 font-normal">
+            -- Seleccionar Alumno --
+          </option>
+          {filteredAlumnos.map((a) => (
+            <option key={a.ID_Alumno} value={a.ID_Alumno} className="bg-slate-900 text-white">
+              {a.Nombre_Completo} — [{a.ID_Alumno}]
+            </option>
+          ))}
         </select>
       </div>
 
