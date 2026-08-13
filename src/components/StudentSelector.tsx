@@ -31,11 +31,12 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
   // Check if teacher is restricted to a specific level
   const userRoleLower = user?.rol?.toLowerCase() || '';
   const assignedLevel = user?.nivelAsignado;
-  const isRestrictedTeacher =
+  const isRestrictedTeacher = Boolean(
     userRoleLower === 'maestro' &&
     assignedLevel &&
     assignedLevel !== 'Todos' &&
-    assignedLevel !== 'Administrador';
+    assignedLevel !== 'Administrador'
+  );
 
   useEffect(() => {
     async function loadData() {
