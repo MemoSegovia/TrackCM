@@ -120,144 +120,142 @@ export default function AlumnoPage() {
             </div>
           </div>
 
-          {/* Student Profile Header Banner */}
+          {/* Student Profile Header Banner & Full Report Container */}
           {student && (
             <div id="student-full-report" className="space-y-6 pt-2">
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-              <div className="sm:col-span-2 bg-slate-950 border border-slate-800 rounded-xl p-4 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 text-cyan-400 font-extrabold text-xl flex items-center justify-center">
-                  {student.Nombre_Completo.charAt(0)}
+                <div className="sm:col-span-2 bg-slate-950 border border-slate-800 rounded-xl p-4 flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 text-cyan-400 font-extrabold text-xl flex items-center justify-center">
+                    {student.Nombre_Completo.charAt(0)}
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-white">{student.Nombre_Completo}</h2>
+                    <p className="text-xs text-slate-400">
+                      {student.Nivel} • {student.Grado}° "{student.Grupo}" | ID: {student.ID_Alumno}
+                    </p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Ciclo Escolar: {student.Ciclo_Escolar}</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-base font-bold text-white">{student.Nombre_Completo}</h2>
-                  <p className="text-xs text-slate-400">
-                    {student.Nivel} • {student.Grado}° "{student.Grupo}" | ID: {student.ID_Alumno}
-                  </p>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Ciclo Escolar: {student.Ciclo_Escolar}</p>
+
+                {/* Latest IMC summary widget */}
+                <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-400">Último IMC</p>
+                    <p className="text-xl font-black text-white font-mono">
+                      {latestAntro ? latestAntro.IMC : 'N/A'}
+                    </p>
+                    <p className="text-[10px] text-slate-500">
+                      {latestAntro ? `${latestAntro.Peso_kg} kg | ${latestAntro.Estatura_cm} cm` : 'Sin registros'}
+                    </p>
+                  </div>
+                  {latestImcInfo && (
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${latestImcInfo.badgeClass}`}>
+                      {latestImcInfo.categoria}
+                    </span>
+                  )}
+                </div>
+
+                {/* Athletic marks count widget */}
+                <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-400">Pruebas Registradas</p>
+                    <p className="text-xl font-black text-emerald-400 font-mono">
+                      {historial.atletismo.length}
+                    </p>
+                    <p className="text-[10px] text-slate-500">Atletismo y Saltos</p>
+                  </div>
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                    <Trophy className="w-5 h-5" />
+                  </div>
                 </div>
               </div>
 
-              {/* Latest IMC summary widget */}
-              <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold text-slate-400">Último IMC</p>
-                  <p className="text-xl font-black text-white font-mono">
-                    {latestAntro ? latestAntro.IMC : 'N/A'}
-                  </p>
-                  <p className="text-[10px] text-slate-500">
-                    {latestAntro ? `${latestAntro.Peso_kg} kg | ${latestAntro.Estatura_cm} cm` : 'Sin registros'}
-                  </p>
-                </div>
-                {latestImcInfo && (
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${latestImcInfo.badgeClass}`}>
-                    {latestImcInfo.categoria}
-                  </span>
-                )}
-              </div>
+              {/* Progression Charts Section */}
+              <PerformanceCharts
+                antropometricos={historial.antropometrico}
+                atletismo={historial.atletismo}
+              />
 
-              {/* Athletic marks count widget */}
-              <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-semibold text-slate-400">Pruebas Registradas</p>
-                  <p className="text-xl font-black text-emerald-400 font-mono">
-                    {historial.atletismo.length}
-                  </p>
-                  <p className="text-[10px] text-slate-500">Atletismo y Saltos</p>
+              {/* Detail Records Tables */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Atletismo Records */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+                  <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+                    <Trophy className="w-4 h-4 text-emerald-400" />
+                    <h3 className="text-sm font-bold text-white">Pruebas de Atletismo</h3>
+                  </div>
+                  {historial.atletismo.length === 0 ? (
+                    <p className="text-xs text-slate-500 py-4 text-center">No hay registros de atletismo.</p>
+                  ) : (
+                    <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                      {historial.atletismo.map((r) => (
+                        <div key={r.ID_Registro} className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+                          <div className="flex items-center justify-between text-xs font-bold text-white">
+                            <span>{r.Prueba}</span>
+                            <span className="text-emerald-400 font-mono text-sm">{r.Resultado_Principal}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] text-slate-400">
+                            <span>Fecha: {r.Fecha}</span>
+                            <span className="font-mono text-slate-500">Puntos: {r.Puntos || 90}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-                  <Trophy className="w-5 h-5" />
+
+                {/* Antropométrico Records */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+                  <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+                    <HeartPulse className="w-4 h-4 text-cyan-400" />
+                    <h3 className="text-sm font-bold text-white">Historial de IMC y Peso</h3>
+                  </div>
+                  {historial.antropometrico.length === 0 ? (
+                    <p className="text-xs text-slate-500 py-4 text-center">No hay registros antropométricos.</p>
+                  ) : (
+                    <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                      {historial.antropometrico.map((r) => (
+                        <div key={r.ID_Registro} className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+                          <div className="flex items-center justify-between text-xs font-bold text-white">
+                            <span>IMC: {r.IMC}</span>
+                            <span className="text-cyan-400 font-mono">{r.Peso_kg} kg | {r.Estatura_cm} cm</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] text-slate-400">
+                            <span>Fecha: {r.Fecha}</span>
+                            <span>Edad: {r.Edad} años</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Qualitative Records */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+                  <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+                    <Award className="w-4 h-4 text-purple-400" />
+                    <h3 className="text-sm font-bold text-white">Evaluaciones Cualitativas</h3>
+                  </div>
+                  {historial.cualitativo.length === 0 ? (
+                    <p className="text-xs text-slate-500 py-4 text-center">No hay evaluaciones cualitativas.</p>
+                  ) : (
+                    <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                      {historial.cualitativo.map((r) => (
+                        <div key={r.ID_Registro} className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+                          <div className="flex items-center justify-between text-xs font-bold text-white">
+                            <span>{r.Deporte_o_Prueba}</span>
+                            <span className="text-purple-400 font-bold">{r.Calificacion}</span>
+                          </div>
+                          <div className="text-[11px] text-slate-400">Fecha: {r.Fecha}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           )}
         </div>
-
-        {/* Progression Charts Section */}
-        {student && (
-          <PerformanceCharts
-            antropometricos={historial.antropometrico}
-            atletismo={historial.atletismo}
-          />
-        )}
-
-        {/* Detail Records Tables */}
-        {student && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Atletismo Records */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
-              <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
-                <Trophy className="w-4 h-4 text-emerald-400" />
-                <h3 className="text-sm font-bold text-white">Pruebas de Atletismo</h3>
-              </div>
-              {historial.atletismo.length === 0 ? (
-                <p className="text-xs text-slate-500 py-4 text-center">No hay registros de atletismo.</p>
-              ) : (
-                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                  {historial.atletismo.map((r) => (
-                    <div key={r.ID_Registro} className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
-                      <div className="flex items-center justify-between text-xs font-bold text-white">
-                        <span>{r.Prueba}</span>
-                        <span className="text-emerald-400 font-mono text-sm">{r.Resultado_Principal}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] text-slate-400">
-                        <span>Fecha: {r.Fecha}</span>
-                        <span className="font-mono text-slate-500">Puntos: {r.Puntos || 90}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Antropométrico Records */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
-              <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
-                <HeartPulse className="w-4 h-4 text-cyan-400" />
-                <h3 className="text-sm font-bold text-white">Historial de IMC y Peso</h3>
-              </div>
-              {historial.antropometrico.length === 0 ? (
-                <p className="text-xs text-slate-500 py-4 text-center">No hay registros antropométricos.</p>
-              ) : (
-                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                  {historial.antropometrico.map((r) => (
-                    <div key={r.ID_Registro} className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
-                      <div className="flex items-center justify-between text-xs font-bold text-white">
-                        <span>IMC: {r.IMC}</span>
-                        <span className="text-cyan-400 font-mono">{r.Peso_kg} kg | {r.Estatura_cm} cm</span>
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] text-slate-400">
-                        <span>Fecha: {r.Fecha}</span>
-                        <span>Edad: {r.Edad} años</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Qualitative Records */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
-              <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
-                <Award className="w-4 h-4 text-purple-400" />
-                <h3 className="text-sm font-bold text-white">Evaluaciones Cualitativas</h3>
-              </div>
-              {historial.cualitativo.length === 0 ? (
-                <p className="text-xs text-slate-500 py-4 text-center">No hay evaluaciones cualitativas.</p>
-              ) : (
-                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                  {historial.cualitativo.map((r) => (
-                    <div key={r.ID_Registro} className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
-                      <div className="flex items-center justify-between text-xs font-bold text-white">
-                        <span>{r.Deporte_o_Prueba}</span>
-                        <span className="text-purple-400 font-bold">{r.Calificacion}</span>
-                      </div>
-                      <div className="text-[11px] text-slate-400">Fecha: {r.Fecha}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
       </main>
     </div>
   );
