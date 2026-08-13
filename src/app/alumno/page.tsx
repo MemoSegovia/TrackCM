@@ -34,6 +34,7 @@ export default function AlumnoPage() {
           }
         } catch (e) {
           console.error(e);
+        }
       }
     }
   }, []);
