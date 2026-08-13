@@ -34,10 +34,6 @@ export default function AlumnoPage() {
           }
         } catch (e) {
           console.error(e);
-        }
-      } else {
-        // Fetch default demo student
-        fetchHistorial('ALU-2026-001');
       }
     }
   }, []);

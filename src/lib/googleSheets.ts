@@ -1,40 +1,11 @@
 import { google } from 'googleapis';
 import { Usuario, AlumnoInscrito, RegistroAntropometrico, RegistroAtletismo, RegistroCualitativo } from './types';
 
-// Mock database for immediate zero-config testing & demonstration
-const MOCK_USUARIOS: Usuario[] = [
-  { ID_Usuario: 'USR-001', Nombre: 'Prof. Carlos Mendoza', Correo: 'maestro@colmexi.edu.mx', Password: '123', Rol: 'Maestro', Nivel_Asignado: 'Todos' },
-  { ID_Usuario: 'USR-002', Nombre: 'Profra. Elena Gómez', Correo: 'elena.gomez@colmexi.edu.mx', Password: '123', Rol: 'Maestro', Nivel_Asignado: 'Secundaria' },
-  { ID_Usuario: 'USR-003', Nombre: 'Mateo Hernández', Correo: 'alumno@colmexi.edu.mx', Password: '123', Rol: 'Alumno', Nivel_Asignado: 'N/A' },
-  { ID_Usuario: 'USR-004', Nombre: 'Sofía Rodríguez', Correo: 'sofia.rodriguez@colmexi.edu.mx', Password: '123', Rol: 'Alumno', Nivel_Asignado: 'N/A' },
-];
-
-const MOCK_ALUMNOS: AlumnoInscrito[] = [
-  { ID_Alumno: 'ALU-2026-001', Nombre_Completo: 'Mateo Hernández Ruiz', Fecha_Nacimiento: '2012-04-15', Genero: 'M', Nivel: 'Secundaria', Grado: '1', Grupo: 'A', Ciclo_Escolar: '2026-2027' },
-  { ID_Alumno: 'ALU-2026-002', Nombre_Completo: 'Sofía Rodríguez Garza', Fecha_Nacimiento: '2012-08-22', Genero: 'F', Nivel: 'Secundaria', Grado: '1', Grupo: 'A', Ciclo_Escolar: '2026-2027' },
-  { ID_Alumno: 'ALU-2026-003', Nombre_Completo: 'Santiago Morales Treviño', Fecha_Nacimiento: '2011-11-03', Genero: 'M', Nivel: 'Secundaria', Grado: '2', Grupo: 'B', Ciclo_Escolar: '2026-2027' },
-  { ID_Alumno: 'ALU-2026-004', Nombre_Completo: 'Valentina López Silva', Fecha_Nacimiento: '2013-02-19', Genero: 'F', Nivel: 'Primaria', Grado: '6', Grupo: 'A', Ciclo_Escolar: '2026-2027' },
-  { ID_Alumno: 'ALU-2026-005', Nombre_Completo: 'Diego Martínez Cantú', Fecha_Nacimiento: '2010-09-10', Genero: 'M', Nivel: 'Preparatoria', Grado: '1', Grupo: 'A', Ciclo_Escolar: '2026-2027' },
-  { ID_Alumno: 'ALU-2026-006', Nombre_Completo: 'Camila Torres Navarro', Fecha_Nacimiento: '2012-01-30', Genero: 'F', Nivel: 'Secundaria', Grado: '1', Grupo: 'B', Ciclo_Escolar: '2026-2027' },
-];
-
-const MOCK_ANTROPOMETRICOS: RegistroAntropometrico[] = [
-  { ID_Registro: 'ANT-260813-001', Fecha: '2026-08-10', ID_Alumno: 'ALU-2026-001', Ciclo_Escolar: '2026-2027', ID_Maestro: 'USR-001', Edad: 14, Peso_kg: 52.5, Estatura_cm: 162, IMC: 20.0 },
-  { ID_Registro: 'ANT-260813-002', Fecha: '2026-08-10', ID_Alumno: 'ALU-2026-002', Ciclo_Escolar: '2026-2027', ID_Maestro: 'USR-001', Edad: 14, Peso_kg: 46.0, Estatura_cm: 158, IMC: 18.4 },
-  { ID_Registro: 'ANT-260813-003', Fecha: '2026-08-11', ID_Alumno: 'ALU-2026-003', Ciclo_Escolar: '2026-2027', ID_Maestro: 'USR-001', Edad: 15, Peso_kg: 61.0, Estatura_cm: 170, IMC: 21.1 },
-];
-
-const MOCK_ATLETISMO: RegistroAtletismo[] = [
-  { ID_Registro: 'ATL-260813-001', Fecha: '2026-08-12', ID_Alumno: 'ALU-2026-001', Ciclo_Escolar: '2026-2027', ID_Maestro: 'USR-001', Prueba: '100m Velocidad', Resultado_Principal: '12.85 s', Detalle_JSON_Vueltas: '{"laps":["12.85 s"]}', Puntos: 95 },
-  { ID_Registro: 'ATL-260813-002', Fecha: '2026-08-12', ID_Alumno: 'ALU-2026-002', Ciclo_Escolar: '2026-2027', ID_Maestro: 'USR-001', Prueba: '100m Velocidad', Resultado_Principal: '13.40 s', Detalle_JSON_Vueltas: '{"laps":["13.40 s"]}', Puntos: 90 },
-  { ID_Registro: 'ATL-260813-003', Fecha: '2026-08-12', ID_Alumno: 'ALU-2026-003', Ciclo_Escolar: '2026-2027', ID_Maestro: 'USR-001', Prueba: 'Salto de Longitud', Resultado_Principal: '4.95 m', Detalle_JSON_Vueltas: '{"attempts":["4.50 m","4.80 m","4.95 m"],"best":"4.95 m"}', Puntos: 92 },
-  { ID_Registro: 'ATL-260813-004', Fecha: '2026-08-12', ID_Alumno: 'ALU-2026-005', Ciclo_Escolar: '2026-2027', ID_Maestro: 'USR-001', Prueba: '100m Velocidad', Resultado_Principal: '11.90 s', Detalle_JSON_Vueltas: '{"laps":["11.90 s"]}', Puntos: 98 },
-];
-
-const MOCK_CUALITATIVOS: RegistroCualitativo[] = [
-  { ID_Registro: 'CUA-260813-001', Fecha: '2026-08-12', ID_Alumno: 'ALU-2026-001', Ciclo_Escolar: '2026-2027', ID_Maestro: 'USR-001', Deporte_o_Prueba: 'Básquetbol', Calificacion: 'Excelente' },
-  { ID_Registro: 'CUA-260813-002', Fecha: '2026-08-12', ID_Alumno: 'ALU-2026-002', Ciclo_Escolar: '2026-2027', ID_Maestro: 'USR-001', Deporte_o_Prueba: 'Voleibol', Calificacion: 'Muy Bueno' },
-];
+const MOCK_USUARIOS: Usuario[] = [];
+const MOCK_ALUMNOS: AlumnoInscrito[] = [];
+const MOCK_ANTROPOMETRICOS: RegistroAntropometrico[] = [];
+const MOCK_ATLETISMO: RegistroAtletismo[] = [];
+const MOCK_CUALITATIVOS: RegistroCualitativo[] = [];
 
 // Helper to sanitize private keys coming from env vars (handling escaped newlines \n)
 function getSanitizedPrivateKey(key?: string): string | undefined {
