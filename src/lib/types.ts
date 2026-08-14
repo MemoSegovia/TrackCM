@@ -83,6 +83,7 @@ export interface MultiStudentRunner {
   lane: number;
   finishTimeMs?: number;
   finished: boolean;
+  isUncompleted?: boolean;
 }
 
 export interface AdminTeacherActivity {

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Trophy, Star, Send, CheckCircle, Target } from 'lucide-react';
+import { Trophy, Star, Send, CheckCircle, Target, Ban } from 'lucide-react';
 import { AlumnoInscrito, UserSession } from '@/lib/types';
 
 interface JumpsThrowsModuleProps {
@@ -77,6 +77,53 @@ export default function JumpsThrowsModule({
       const data = await res.json();
       if (data.success) {
         setSuccessMsg(`¡Mejor marca registrada! (${formattedBest})`);
+        setAttempt1('');
+        setAttempt2('');
+        setAttempt3('');
+        if (onRecordSaved) onRecordSaved();
+      } else {
+        setErrorMsg(data.error || 'Error al guardar la marca');
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg('Error de red al conectar con el servidor');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSaveUncompleted = async () => {
+    setSuccessMsg('');
+    setErrorMsg('');
+
+    if (!selectedStudent) {
+      setErrorMsg('Seleccione un alumno primero');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const body = {
+        idAlumno: selectedStudent.ID_Alumno,
+        cicloEscolar,
+        idMaestro: user?.id || 'USR-MAESTRO',
+        prueba,
+        resultadoPrincipal: 'No Completada',
+        detalleJsonVueltas: {
+          noCompletada: true,
+        },
+        puntos: 0,
+      };
+
+      const res = await fetch('/api/registros/atletismo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setSuccessMsg(`¡Prueba registrada como "No Completada" para ${selectedStudent.Nombre_Completo}!`);
         setAttempt1('');
         setAttempt2('');
         setAttempt3('');
@@ -175,14 +222,27 @@ export default function JumpsThrowsModule({
           <Star className="w-6 h-6 text-amber-400 fill-amber-400/30 animate-pulse" />
         </div>
 
-        <button
-          type="submit"
-          disabled={bestValue <= 0 || isSubmitting}
-          className="w-full py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-        >
-          <Send className="w-4 h-4" />
-          {isSubmitting ? 'Guardando...' : 'Registrar Mejor Marca'}
-        </button>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            type="submit"
+            disabled={bestValue <= 0 || isSubmitting}
+            className="flex-1 py-3.5 px-4 rounded-xl font-bold text-sm bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-slate-950 shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+          >
+            <Send className="w-4 h-4" />
+            {isSubmitting ? 'Guardando...' : 'Registrar Mejor Marca'}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSaveUncompleted}
+            disabled={!selectedStudent || isSubmitting}
+            className="py-3.5 px-5 rounded-xl font-bold text-xs bg-rose-950/70 hover:bg-rose-900 text-rose-300 border-2 border-rose-500/40 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-1.5 shadow-md"
+            title="Marcar prueba como no completada"
+          >
+            <Ban className="w-4 h-4 text-rose-400" />
+            No Completada
+          </button>
+        </div>
       </form>
 
       {/* Messages */}
@@ -200,3 +260,4 @@ export default function JumpsThrowsModule({
     </div>
   );
 }
+

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Flag, Send, Timer, CheckCircle, Users, UserPlus, Zap, Trash2 } from 'lucide-react';
+import { Play, Pause, RotateCcw, Flag, Send, Timer, CheckCircle, Users, UserPlus, Zap, Trash2, Ban } from 'lucide-react';
 import { formatStopwatchTime } from '@/lib/utils';
 import { AlumnoInscrito, UserSession, MultiStudentRunner } from '@/lib/types';
 
@@ -165,6 +165,53 @@ export default function StopwatchModule({
     }
   };
 
+  const handleSaveUncompleted = async () => {
+    if (!selectedStudent) {
+      setErrorMsg('Por favor seleccione un alumno en la parte superior primero');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setErrorMsg('');
+      setSuccessMsg('');
+
+      const body = {
+        idAlumno: selectedStudent.ID_Alumno,
+        nombreAlumno: selectedStudent.Nombre_Completo,
+        cicloEscolar,
+        idMaestro: user?.id || 'USR-MAESTRO',
+        nombreMaestro: user?.nombre || 'Profesor',
+        prueba,
+        resultadoPrincipal: 'No Completada',
+        detalleJsonVueltas: {
+          noCompletada: true,
+        },
+        puntos: 0,
+      };
+
+      const res = await fetch('/api/registros/atletismo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setSuccessMsg(`¡Registro guardado como "No Completada" para ${selectedStudent.Nombre_Completo}!`);
+        handleReset();
+        if (onRecordSaved) onRecordSaved();
+      } else {
+        setErrorMsg(data.error || 'Error al guardar el registro');
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg('Error de red al conectar con el servidor');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Multi-Runner Mode Handlers
   const handleAddRunner = (studentId: string) => {
     const studentObj = availableStudents.find((s) => s.ID_Alumno === studentId);
@@ -203,7 +250,7 @@ export default function StopwatchModule({
       return;
     }
     setMultiElapsedTime(0);
-    setSelectedRunners((prev) => prev.map((r) => ({ ...r, finished: false, finishTimeMs: undefined })));
+    setSelectedRunners((prev) => prev.map((r) => ({ ...r, finished: false, finishTimeMs: undefined, isUncompleted: false })));
     setIsMultiRunning(true);
     setSuccessMsg('');
     setErrorMsg('');
@@ -216,7 +263,17 @@ export default function StopwatchModule({
     setSelectedRunners((prev) =>
       prev.map((r) =>
         r.student.ID_Alumno === studentId
-          ? { ...r, finished: true, finishTimeMs: currentMs }
+          ? { ...r, finished: true, finishTimeMs: currentMs, isUncompleted: false }
+          : r
+      )
+    );
+  };
+
+  const handleUncompleteRunner = (studentId: string) => {
+    setSelectedRunners((prev) =>
+      prev.map((r) =>
+        r.student.ID_Alumno === studentId
+          ? { ...r, finished: true, isUncompleted: true, finishTimeMs: undefined }
           : r
       )
     );
@@ -225,15 +282,15 @@ export default function StopwatchModule({
   const handleResetMultiRace = () => {
     setIsMultiRunning(false);
     setMultiElapsedTime(0);
-    setSelectedRunners((prev) => prev.map((r) => ({ ...r, finished: false, finishTimeMs: undefined })));
+    setSelectedRunners((prev) => prev.map((r) => ({ ...r, finished: false, finishTimeMs: undefined, isUncompleted: false })));
     setSuccessMsg('');
     setErrorMsg('');
   };
 
   const handleSaveMultiResults = async () => {
-    const finishedRunners = selectedRunners.filter((r) => r.finished && r.finishTimeMs);
+    const finishedRunners = selectedRunners.filter((r) => r.finished);
     if (finishedRunners.length === 0) {
-      setErrorMsg('No hay tiempos de llegada registrados aún para guardar');
+      setErrorMsg('No hay corredores finalizados ni marcados como "No Completada"');
       return;
     }
 
@@ -243,7 +300,8 @@ export default function StopwatchModule({
 
       let savedCount = 0;
       for (const r of finishedRunners) {
-        const formattedTotal = formatStopwatchTime(r.finishTimeMs!) + ' s';
+        const isUncomp = Boolean(r.isUncompleted);
+        const formattedTotal = isUncomp ? 'No Completada' : formatStopwatchTime(r.finishTimeMs || 0) + ' s';
         const body = {
           idAlumno: r.student.ID_Alumno,
           nombreAlumno: r.student.Nombre_Completo,
@@ -255,9 +313,10 @@ export default function StopwatchModule({
           detalleJsonVueltas: {
             carreraMultiAlumno: true,
             carril: r.lane,
-            tiempoTotalMs: r.finishTimeMs,
+            noCompletada: isUncomp,
+            tiempoTotalMs: isUncomp ? 0 : r.finishTimeMs,
           },
-          puntos: 95,
+          puntos: isUncomp ? 0 : 95,
         };
 
         const res = await fetch('/api/registros/atletismo', {
@@ -269,7 +328,7 @@ export default function StopwatchModule({
         if (data.success) savedCount++;
       }
 
-      setSuccessMsg(`¡Se guardaron ${savedCount} marcas de carrera individualmente en Google Sheets!`);
+      setSuccessMsg(`¡Se guardaron ${savedCount} registros de carrera en la base de datos!`);
       handleResetMultiRace();
       if (onRecordSaved) onRecordSaved();
     } catch (err) {
@@ -336,7 +395,7 @@ export default function StopwatchModule({
           <option value="400m Planos">400m Planos</option>
           <option value="800m Medio Fondo">800m Medio Fondo</option>
           <option value="1500m Fondo">1500m Fondo</option>
-          <option value="Prueba de Vueltas Cancha">Prueba de Vueltas Cancha</option>
+          <option value="Pruebas de Resistencia">Pruebas de Resistencia</option>
         </select>
       </div>
 
@@ -366,7 +425,7 @@ export default function StopwatchModule({
           </div>
 
           {/* Individual Controls (EXTRA LARGE TOUCH BUTTONS) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             <button
               onClick={handleStartPause}
               className={`flex items-center justify-center gap-3 min-h-[60px] py-4 px-6 rounded-2xl font-black text-base transition-all shadow-xl active:scale-95 ${
@@ -408,6 +467,15 @@ export default function StopwatchModule({
             >
               <Send className="w-5 h-5" />
               {isSubmitting ? 'GUARDANDO...' : 'GUARDAR MARCA'}
+            </button>
+
+            <button
+              onClick={handleSaveUncompleted}
+              disabled={!selectedStudent || isSubmitting}
+              className="flex items-center justify-center gap-2 min-h-[60px] py-4 px-4 rounded-2xl font-black text-sm bg-rose-950/70 hover:bg-rose-900 text-rose-300 border-2 border-rose-500/40 shadow-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95"
+              title="Marcar prueba como no completada"
+            >
+              <Ban className="w-5 h-5 text-rose-400" /> NO COMPLETADA
             </button>
           </div>
 
@@ -492,7 +560,7 @@ export default function StopwatchModule({
             </div>
           </div>
 
-          {/* Lanes / Runners Cards (WITH PROMINENT EXTRA LARGE FINISH BUTTONS) */}
+          {/* Lanes / Runners Cards (WITH PROMINENT FINISH AND UNCOMPLETED BUTTONS) */}
           {selectedRunners.length === 0 ? (
             <div className="py-10 text-center text-sm font-medium text-slate-400 bg-slate-950 rounded-2xl border border-slate-800 shadow-inner">
               No hay corredores agregados aún. Seleccione alumnos arriba para asignarlos a carriles de carrera.
@@ -523,20 +591,37 @@ export default function StopwatchModule({
                   <div className="flex items-center gap-3 justify-between sm:justify-end">
                     {runner.finished ? (
                       <div className="flex items-center gap-2 bg-emerald-500/10 border-2 border-emerald-500/40 px-5 py-2.5 rounded-2xl">
-                        <CheckCircle className="w-5 h-5 text-emerald-400" />
-                        <span className="font-mono font-black text-lg text-emerald-400">
-                          {formatStopwatchTime(runner.finishTimeMs!)} s
-                        </span>
+                        {runner.isUncompleted ? (
+                          <>
+                            <Ban className="w-5 h-5 text-rose-400" />
+                            <span className="font-mono font-black text-sm text-rose-400">NO COMPLETADA</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="w-5 h-5 text-emerald-400" />
+                            <span className="font-mono font-black text-lg text-emerald-400">
+                              {formatStopwatchTime(runner.finishTimeMs!)} s
+                            </span>
+                          </>
+                        )}
                       </div>
                     ) : (
-                      /* EXTRA LARGE FINISH BUTTON */
-                      <button
-                        onClick={() => handleFinishRunner(runner.student.ID_Alumno)}
-                        disabled={!isMultiRunning}
-                        className="flex-1 sm:flex-none min-h-[52px] px-6 py-3 rounded-2xl text-sm font-black bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 disabled:opacity-30 shadow-lg shadow-amber-500/20 active:scale-95 transition-all border-2 border-amber-300"
-                      >
-                        🏁 LLEGÓ / META
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleFinishRunner(runner.student.ID_Alumno)}
+                          disabled={!isMultiRunning}
+                          className="px-5 py-3 rounded-2xl text-xs font-black bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 disabled:opacity-30 shadow-lg shadow-amber-500/20 active:scale-95 transition-all border-2 border-amber-300"
+                        >
+                          🏁 LLEGÓ / META
+                        </button>
+                        <button
+                          onClick={() => handleUncompleteRunner(runner.student.ID_Alumno)}
+                          className="px-3 py-3 rounded-2xl text-xs font-bold bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-500/40 transition-colors shadow-md flex items-center gap-1"
+                          title="Marcar como No completada"
+                        >
+                          <Ban className="w-3.5 h-3.5 text-rose-400" /> DNF
+                        </button>
+                      </div>
                     )}
 
                     <button
@@ -561,7 +646,7 @@ export default function StopwatchModule({
           >
             <Send className="w-6 h-6" />
             {isSubmitting
-              ? 'GUARDANDO MARCAS EN GOOGLE SHEETS...'
+              ? 'GUARDANDO REGISTROS EN BASE DE DATOS...'
               : 'GUARDAR MARCAS DE TODOS LOS COMPETIDORES EN BASE DE DATOS'}
           </button>
         </div>
@@ -582,3 +667,4 @@ export default function StopwatchModule({
     </div>
   );
 }
+
