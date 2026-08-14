@@ -329,6 +329,8 @@ export default function StopwatchModule({
           onChange={(e) => setPrueba(e.target.value)}
           className="w-full bg-slate-950 text-white font-bold text-base rounded-2xl px-4 py-3 border-2 border-slate-800 focus:outline-none focus:border-emerald-500 shadow-inner"
         >
+          <option value="50m Velocidad">50m Velocidad</option>
+          <option value="75m Velocidad">75m Velocidad</option>
           <option value="100m Velocidad">100m Velocidad</option>
           <option value="200m Velocidad">200m Velocidad</option>
           <option value="400m Planos">400m Planos</option>
