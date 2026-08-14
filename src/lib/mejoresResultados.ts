@@ -14,6 +14,33 @@ export const PESTANIAS_GRUPOS_OFICIALES = [
   '10A', '10B', '10C', '10D', '10E', '11A', '11B', '12A', '12B', '12C', '12D',
 ] as const;
 
+export function isStudentInGrupo(a: AlumnoInscrito, targetGrupo: string): boolean {
+  const target = (targetGrupo || '').trim().toUpperCase();
+  const rawGrupo = (a.Grupo || '').trim().toUpperCase();
+  const rawGrado = (a.Grado || '').trim().toUpperCase();
+  const rawNivel = (a.Nivel || '').trim().toUpperCase();
+
+  // Direct match (e.g. Grupo === "1A" or "K1")
+  if (rawGrupo === target) return true;
+
+  // Grado + Grupo combination (e.g. Grado "1" + Grupo "A" => "1A")
+  const combo = `${rawGrado}${rawGrupo}`.replace(/[^A-Z0-9]/g, '');
+  if (combo === target) return true;
+
+  // Kinder cases: K1, K2, K3
+  if (target.startsWith('K')) {
+    const kNum = target.replace('K', '');
+    if (
+      (rawNivel.includes('KINDER') || rawNivel.includes('PRE')) &&
+      (rawGrado === kNum || rawGrupo === kNum || rawGrado === target || rawGrupo === target)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export function getNivelByGrupo(grupoName: string): string {
   const g = (grupoName || '').trim().toUpperCase();
   if (['K1', 'K2', 'K3'].includes(g)) return 'Kinder';

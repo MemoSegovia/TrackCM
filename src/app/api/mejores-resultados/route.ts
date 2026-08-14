@@ -8,6 +8,7 @@ import {
 import {
   calculateBestMarksForStudent,
   getNivelByGrupo,
+  isStudentInGrupo,
   PESTANIAS_GRUPOS_OFICIALES,
 } from '@/lib/mejoresResultados';
 
@@ -23,10 +24,8 @@ export async function GET(request: Request) {
       getRegistrosCualitativos(),
     ]);
 
-    // Filter students for the requested group (case-insensitive)
-    const groupStudents = alumnos.filter(
-      (a) => (a.Grupo || '').trim().toUpperCase() === targetGrupo.trim().toUpperCase()
-    );
+    // Filter students for the requested group
+    const groupStudents = alumnos.filter((a) => isStudentInGrupo(a, targetGrupo));
 
     const rows = groupStudents.map((st) =>
       calculateBestMarksForStudent(st, atletismo, cualitativo)
@@ -69,9 +68,7 @@ export async function POST(request: Request) {
       getRegistrosCualitativos(),
     ]);
 
-    const groupStudents = alumnos.filter(
-      (a) => (a.Grupo || '').trim().toUpperCase() === grupo.trim().toUpperCase()
-    );
+    const groupStudents = alumnos.filter((a) => isStudentInGrupo(a, grupo));
 
     const rowsData = groupStudents.map((st) =>
       calculateBestMarksForStudent(st, atletismo, cualitativo)
