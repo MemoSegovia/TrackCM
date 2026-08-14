@@ -5,7 +5,7 @@ import { AlumnoInscrito, UserSession, NIVELES_ESCOLARES_OFICIALES } from '@/lib/
 import { Filter, User, Layers, GraduationCap, Calendar, CheckCircle2, Lock } from 'lucide-react';
 
 interface StudentSelectorProps {
-  onSelectStudent: (student: AlumnoInscrito | null, ciclo: string) => void;
+  onSelectStudent: (student: AlumnoInscrito | null, ciclo: string, groupStudents?: AlumnoInscrito[]) => void;
   user?: UserSession | null;
   selectedStudentId?: string;
 }
@@ -133,17 +133,17 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
 
     const exists = list.find((a) => a.ID_Alumno === selectedAlumnoId);
     if (exists) {
-      onSelectStudent(exists, selectedCiclo);
+      onSelectStudent(exists, selectedCiclo, list);
     } else {
       setSelectedAlumnoId('');
-      onSelectStudent(null, selectedCiclo);
+      onSelectStudent(null, selectedCiclo, list);
     }
   }, [selectedCiclo, selectedNivel, selectedGrado, selectedGrupo, alumnos]);
 
   const handleStudentChange = (id: string) => {
     setSelectedAlumnoId(id);
     const st = alumnos.find((a) => a.ID_Alumno === id) || null;
-    onSelectStudent(st, selectedCiclo);
+    onSelectStudent(st, selectedCiclo, filteredAlumnos);
   };
 
   const selectedStudentObj = alumnos.find((a) => a.ID_Alumno === selectedAlumnoId);

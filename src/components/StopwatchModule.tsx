@@ -9,6 +9,7 @@ interface StopwatchModuleProps {
   selectedStudent: AlumnoInscrito | null;
   cicloEscolar: string;
   user: UserSession | null;
+  groupStudents?: AlumnoInscrito[];
   onRecordSaved?: () => void;
 }
 
@@ -16,6 +17,7 @@ export default function StopwatchModule({
   selectedStudent,
   cicloEscolar,
   user,
+  groupStudents,
   onRecordSaved,
 }: StopwatchModuleProps) {
   const [mode, setMode] = useState<'individual' | 'multi'>('individual');
@@ -72,21 +74,25 @@ export default function StopwatchModule({
     };
   }, [isMultiRunning]);
 
-  // Fetch group students list for multi-runner selection
+  // Fetch / Sync group students list for multi-runner selection
   useEffect(() => {
-    async function loadGroupStudents() {
-      try {
-        const res = await fetch('/api/estudiantes');
-        const data = await res.json();
-        if (data.success && data.alumnos) {
-          setAvailableStudents(data.alumnos);
+    if (groupStudents && Array.isArray(groupStudents)) {
+      setAvailableStudents(groupStudents);
+    } else {
+      const loadGroupStudents = async () => {
+        try {
+          const res = await fetch('/api/estudiantes');
+          const data = await res.json();
+          if (data.success && data.alumnos) {
+            setAvailableStudents(data.alumnos);
+          }
+        } catch (err) {
+          console.error(err);
         }
-      } catch (err) {
-        console.error(err);
-      }
+      };
+      loadGroupStudents();
     }
-    loadGroupStudents();
-  }, []);
+  }, [groupStudents]);
 
   // Single Mode Handlers
   const handleStartPause = () => {
@@ -521,7 +527,9 @@ export default function StopwatchModule({
               }}
               className="w-full bg-slate-900 text-slate-100 font-semibold text-sm rounded-xl px-4 py-3 border border-slate-700 focus:outline-none focus:border-emerald-500 shadow-inner"
             >
-              <option value="">-- Seleccionar Alumno para Agregar a un Carril --</option>
+              <option value="">
+                -- Seleccionar Alumno del Grupo Seleccionado ({availableStudents.length} disponibles) --
+              </option>
               {availableStudents.map((st) => (
                 <option key={st.ID_Alumno} value={st.ID_Alumno}>
                   {st.Nombre_Completo} ({st.Nivel} {st.Grado}° "{st.Grupo}")

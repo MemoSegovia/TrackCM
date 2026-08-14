@@ -15,6 +15,7 @@ export default function MaestroPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserSession | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<AlumnoInscrito | null>(null);
+  const [groupStudents, setGroupStudents] = useState<AlumnoInscrito[]>([]);
   const [cicloEscolar, setCicloEscolar] = useState<string>('2026-2027');
   const [activeTab, setActiveTab] = useState<'stopwatch' | 'jumps' | 'antro' | 'qualitative'>('stopwatch');
 
@@ -62,9 +63,16 @@ export default function MaestroPage() {
     }
   };
 
-  const handleSelectStudent = (student: AlumnoInscrito | null, ciclo: string) => {
+  const handleSelectStudent = (
+    student: AlumnoInscrito | null,
+    ciclo: string,
+    groupStudentsList?: AlumnoInscrito[]
+  ) => {
     setSelectedStudent(student);
     setCicloEscolar(ciclo);
+    if (groupStudentsList) {
+      setGroupStudents(groupStudentsList);
+    }
     if (student) {
       loadStudentHistory(student.ID_Alumno);
     }
@@ -149,6 +157,7 @@ export default function MaestroPage() {
               selectedStudent={selectedStudent}
               cicloEscolar={cicloEscolar}
               user={user}
+              groupStudents={groupStudents}
               onRecordSaved={() => selectedStudent && loadStudentHistory(selectedStudent.ID_Alumno)}
             />
           )}
