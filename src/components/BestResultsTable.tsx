@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { PESTANIAS_GRUPOS_OFICIALES, getNivelByGrupo, isStudentInGrupo, StudentBestMarksRow } from '@/lib/mejoresResultados';
 import { AlumnoInscrito, UserSession } from '@/lib/types';
-import { Table, RefreshCw, FileText, CheckCircle, Search, Layers, Download } from 'lucide-react';
+import { Table, RefreshCw, FileText, CheckCircle, Search, Layers, Download, FileSpreadsheet } from 'lucide-react';
 import { exportElementToPdf } from '@/lib/exportPdf';
 
 interface BestResultsTableProps {
@@ -154,6 +154,15 @@ export default function BestResultsTable({ user, cicloEscolar = '2026-2027' }: B
           >
             <Download className="w-4 h-4 text-cyan-400" /> Exportar PDF
           </button>
+
+          <a
+            href="/Pasos_Inicio_Ciclo_Escolar_TrackCM.xlsx"
+            download
+            className="py-3 px-4 rounded-2xl font-bold text-xs bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-500/40 transition-all flex items-center gap-2 shadow-md active:scale-95"
+            title="Descargar guía de pasos en Excel"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-400" /> Guía Excel Ciclos
+          </a>
         </div>
       </div>
 
