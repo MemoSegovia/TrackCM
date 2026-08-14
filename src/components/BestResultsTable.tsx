@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PESTANIAS_GRUPOS_OFICIALES, getNivelByGrupo, StudentBestMarksRow } from '@/lib/mejoresResultados';
-import { UserSession } from '@/lib/types';
+import { PESTANIAS_GRUPOS_OFICIALES, getNivelByGrupo, isStudentInGrupo, StudentBestMarksRow } from '@/lib/mejoresResultados';
+import { AlumnoInscrito, UserSession } from '@/lib/types';
 import { Table, RefreshCw, FileText, CheckCircle, Search, Layers, Download } from 'lucide-react';
 import { exportElementToPdf } from '@/lib/exportPdf';
 
@@ -15,10 +15,45 @@ export default function BestResultsTable({ user, cicloEscolar = '2026-2027' }: B
   const [selectedGrupo, setSelectedGrupo] = useState<string>('1A');
   const [nivel, setNivel] = useState<string>('Primaria Menor');
   const [rows, setRows] = useState<StudentBestMarksRow[]>([]);
+  const [allStudents, setAllStudents] = useState<AlumnoInscrito[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [syncing, setSyncing] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Load all students to detect which groups have enrolled students
+  useEffect(() => {
+    async function loadAllStudents() {
+      try {
+        const res = await fetch('/api/estudiantes');
+        const data = await res.json();
+        if (data.success && data.alumnos) {
+          setAllStudents(data.alumnos || []);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    loadAllStudents();
+  }, []);
+
+  // Helper to count enrolled students per group tab
+  const getTabStudentCount = (tabName: string) => {
+    return allStudents.filter((st) => isStudentInGrupo(st, tabName)).length;
+  };
+
+  // Auto-switch to first group tab with enrolled students if current selected tab is empty
+  useEffect(() => {
+    if (allStudents.length > 0) {
+      const countInCurrent = getTabStudentCount(selectedGrupo);
+      if (countInCurrent === 0) {
+        const tabWithStudents = PESTANIAS_GRUPOS_OFICIALES.find((g) => getTabStudentCount(g) > 0);
+        if (tabWithStudents) {
+          setSelectedGrupo(tabWithStudents);
+        }
+      }
+    }
+  }, [allStudents]);
 
   useEffect(() => {
     setNivel(getNivelByGrupo(selectedGrupo));
@@ -128,19 +163,34 @@ export default function BestResultsTable({ user, cicloEscolar = '2026-2027' }: B
           <Layers className="w-4 h-4 text-emerald-400" /> Pestaña de Grupo ({PESTANIAS_GRUPOS_OFICIALES.length} pestañas):
         </label>
         <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2 bg-slate-950 rounded-2xl border border-slate-800">
-          {PESTANIAS_GRUPOS_OFICIALES.map((g) => (
-            <button
-              key={g}
-              onClick={() => setSelectedGrupo(g)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
-                selectedGrupo === g
-                  ? 'bg-emerald-500 text-slate-950 shadow-md scale-105'
-                  : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
-              }`}
-            >
-              {g}
-            </button>
-          ))}
+          {PESTANIAS_GRUPOS_OFICIALES.map((g) => {
+            const count = getTabStudentCount(g);
+            const isSelected = selectedGrupo === g;
+            return (
+              <button
+                key={g}
+                onClick={() => setSelectedGrupo(g)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 ${
+                  isSelected
+                    ? 'bg-emerald-500 text-slate-950 shadow-md scale-105'
+                    : count > 0
+                    ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-900'
+                    : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+                }`}
+              >
+                <span>{g}</span>
+                {count > 0 && (
+                  <span
+                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                      isSelected ? 'bg-slate-950 text-emerald-400' : 'bg-emerald-500/20 text-emerald-400'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
