@@ -319,6 +319,17 @@ export async function addRegistroCualitativo(data: RegistroCualitativo): Promise
   }
 }
 
+function getSpreadsheetIdForCiclo(cicloEscolar?: string): string | undefined {
+  if (cicloEscolar) {
+    const cleanCiclo = cicloEscolar.replace(/[^a-zA-Z0-9]/g, '_');
+    const envKey = `SPREADSHEET_ID_MEJORES_RESULTADOS_${cleanCiclo}`;
+    if (process.env[envKey]) {
+      return process.env[envKey];
+    }
+  }
+  return process.env.SPREADSHEET_ID_MEJORES_RESULTADOS || process.env.SPREADSHEET_ID;
+}
+
 export async function updateGrupoMejoresResultadosSheet(
   grupo: string,
   cicloEscolar: string,
@@ -328,7 +339,7 @@ export async function updateGrupoMejoresResultadosSheet(
   const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
   const privateKey = getSanitizedPrivateKey(process.env.GOOGLE_PRIVATE_KEY);
   const mejoesSpreadsheetId = getSanitizedSpreadsheetId(
-    process.env.SPREADSHEET_ID_MEJORES_RESULTADOS || process.env.SPREADSHEET_ID
+    getSpreadsheetIdForCiclo(cicloEscolar)
   );
 
   if (!clientEmail || !privateKey || !mejoesSpreadsheetId) {
