@@ -74,29 +74,33 @@ export default function Navbar({ user }: NavbarProps) {
               </Link>
             )}
 
-            <Link
-              href="/leaderboard"
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                pathname === '/leaderboard'
-                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <Award className="w-4 h-4 text-amber-400" />
-              Leaderboard
-            </Link>
+            {pathname !== '/' && (
+              <>
+                <Link
+                  href="/leaderboard"
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                    pathname === '/leaderboard'
+                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                >
+                  <Award className="w-4 h-4 text-amber-400" />
+                  Leaderboard
+                </Link>
 
-            <Link
-              href="/alumno"
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                pathname === '/alumno'
-                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
-              }`}
-            >
-              <Activity className="w-4 h-4 text-cyan-400" />
-              Historial Estudiante
-            </Link>
+                <Link
+                  href="/alumno"
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                    pathname === '/alumno'
+                      ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                >
+                  <Activity className="w-4 h-4 text-cyan-400" />
+                  Historial Estudiante
+                </Link>
+              </>
+            )}
           </nav>
 
           {/* Right User Controls */}
@@ -155,25 +159,29 @@ export default function Navbar({ user }: NavbarProps) {
             </Link>
           )}
 
-          <Link
-            href="/leaderboard"
-            className={`flex items-center gap-1 px-2 py-1 rounded-md ${
-              pathname === '/leaderboard' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400'
-            }`}
-          >
-            <Award className="w-3.5 h-3.5" />
-            Ranking
-          </Link>
+          {pathname !== '/' && (
+            <>
+              <Link
+                href="/leaderboard"
+                className={`flex items-center gap-1 px-2 py-1 rounded-md ${
+                  pathname === '/leaderboard' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400'
+                }`}
+              >
+                <Award className="w-3.5 h-3.5" />
+                Ranking
+              </Link>
 
-          <Link
-            href="/alumno"
-            className={`flex items-center gap-1 px-2 py-1 rounded-md ${
-              pathname === '/alumno' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400'
-            }`}
-          >
-            <Activity className="w-3.5 h-3.5" />
-            Historial
-          </Link>
+              <Link
+                href="/alumno"
+                className={`flex items-center gap-1 px-2 py-1 rounded-md ${
+                  pathname === '/alumno' ? 'bg-emerald-500/20 text-emerald-400' : 'text-slate-400'
+                }`}
+              >
+                <Activity className="w-3.5 h-3.5" />
+                Historial
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </header>
