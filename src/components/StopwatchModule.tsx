@@ -402,6 +402,9 @@ export default function StopwatchModule({
           <option value="800m Medio Fondo">800m Medio Fondo</option>
           <option value="1500m Fondo">1500m Fondo</option>
           <option value="Pruebas de Resistencia">Pruebas de Resistencia</option>
+          <option value="Salto de Cuerda">Salto de Cuerda (Cuerda)</option>
+          <option value="Orden y Control">Orden y Control</option>
+          <option value="ABC Atletismo">ABC Atletismo (ABC)</option>
         </select>
       </div>
 

@@ -91,6 +91,9 @@ export default function QualitativeModule({
             <option value="Gimnasia y Coordinación">Gimnasia y Coordinación</option>
             <option value="Trabajo en Equipo y Actitud">Trabajo en Equipo y Actitud</option>
             <option value="Resistencia Física General">Resistencia Física General</option>
+            <option value="Salto de Cuerda">Salto de Cuerda (Cuerda)</option>
+            <option value="Orden y Control">Orden y Control</option>
+            <option value="ABC Atletismo">ABC Atletismo (ABC)</option>
           </select>
         </div>
 

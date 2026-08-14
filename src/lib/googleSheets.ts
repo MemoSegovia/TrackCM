@@ -318,3 +318,95 @@ export async function addRegistroCualitativo(data: RegistroCualitativo): Promise
     return true;
   }
 }
+
+export async function updateGrupoMejoresResultadosSheet(
+  grupo: string,
+  cicloEscolar: string,
+  maestroNombre: string,
+  rowsData: any[]
+): Promise<boolean> {
+  const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
+  const privateKey = getSanitizedPrivateKey(process.env.GOOGLE_PRIVATE_KEY);
+  const mejoesSpreadsheetId = getSanitizedSpreadsheetId(
+    process.env.SPREADSHEET_ID_MEJORES_RESULTADOS || process.env.SPREADSHEET_ID
+  );
+
+  if (!clientEmail || !privateKey || !mejoesSpreadsheetId) {
+    console.warn('Sheets client not configured for mejores resultados. Operating in mock mode.');
+    return true;
+  }
+
+  try {
+    const auth = new google.auth.JWT({
+      email: clientEmail,
+      key: privateKey,
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+
+    const sheets = google.sheets({ version: 'v4', auth });
+    
+    // Determine level from group name
+    let nivel = 'General';
+    const g = (grupo || '').trim().toUpperCase();
+    if (['K1', 'K2', 'K3'].includes(g)) nivel = 'Kinder';
+    else if (['1A', '1B', '1C', '2A', '2B', '2C', '3A', '3B', '3C'].includes(g)) nivel = 'Primaria Menor';
+    else if (['4A', '4B', '4C', '5A', '5B', '5C', '6A', '6B', '6C'].includes(g)) nivel = 'Primaria Mayor';
+    else if (['7A', '7B', '7C', '8A', '8B', '8C', '9A', '9B', '9C'].includes(g)) nivel = 'Secundaria';
+    else if (['10A', '10B', '10C', '10D', '10E', '11A', '11B', '12A', '12B', '12C', '12D'].includes(g)) nivel = 'Preparatoria';
+
+    const headerBlock = [
+      [`Profesor: ${maestroNombre}`, '', `Ciclo Escolar: ${cicloEscolar}`, ''],
+      [`Materia: Educación Física`, '', `Nivel Escolar: ${nivel}`, `Grupo: ${grupo}`],
+      [],
+      ['ID_Alumno', 'Nombre del alumno', 'M / F', 'Velocidad', 'Salto', 'Lanzamiento', 'Resistencia', 'Cuerda', 'Orden y Control', 'ABC'],
+    ];
+
+    const dataRows = rowsData.map((r) => [
+      r.idAlumno,
+      r.nombreAlumno,
+      r.generoMF,
+      r.velocidad,
+      r.salto,
+      r.lanzamiento,
+      r.resistencia,
+      r.cuerda,
+      r.ordenYControl,
+      r.abc,
+    ]);
+
+    const allValues = [...headerBlock, ...dataRows];
+    const tabName = grupo.trim();
+
+    try {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: mejoesSpreadsheetId,
+        requestBody: {
+          requests: [
+            {
+              addSheet: {
+                properties: { title: tabName },
+              },
+            },
+          ],
+        },
+      });
+    } catch (e) {
+      // Tab may already exist
+    }
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: mejoesSpreadsheetId,
+      range: `'${tabName}'!A1:J${allValues.length + 5}`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values: allValues,
+      },
+    });
+
+    return true;
+  } catch (err) {
+    console.error(`Error updating Google Sheet tab ${grupo}:`, err);
+    return false;
+  }
+}
+

@@ -8,8 +8,10 @@ import StopwatchModule from '@/components/StopwatchModule';
 import JumpsThrowsModule from '@/components/JumpsThrowsModule';
 import AnthropometricModule from '@/components/AnthropometricModule';
 import QualitativeModule from '@/components/QualitativeModule';
+import BestResultsTable from '@/components/BestResultsTable';
+import ExportPdfButton from '@/components/ExportPdfButton';
 import { AlumnoInscrito, UserSession, RegistroAntropometrico, RegistroAtletismo, RegistroCualitativo } from '@/lib/types';
-import { Timer, Target, HeartPulse, Award, Dumbbell, History, RefreshCw } from 'lucide-react';
+import { Timer, Target, HeartPulse, Award, Dumbbell, History, RefreshCw, Table } from 'lucide-react';
 
 export default function MaestroPage() {
   const router = useRouter();
@@ -17,7 +19,7 @@ export default function MaestroPage() {
   const [selectedStudent, setSelectedStudent] = useState<AlumnoInscrito | null>(null);
   const [groupStudents, setGroupStudents] = useState<AlumnoInscrito[]>([]);
   const [cicloEscolar, setCicloEscolar] = useState<string>('2026-2027');
-  const [activeTab, setActiveTab] = useState<'stopwatch' | 'jumps' | 'antro' | 'qualitative'>('stopwatch');
+  const [activeTab, setActiveTab] = useState<'stopwatch' | 'jumps' | 'antro' | 'qualitative' | 'best-results'>('stopwatch');
 
   // Student history state for preview
   const [recentHistory, setRecentHistory] = useState<{
@@ -104,7 +106,7 @@ export default function MaestroPage() {
         <StudentSelector onSelectStudent={handleSelectStudent} user={user} />
 
         {/* Module Selector Tabs */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
           <button
             onClick={() => setActiveTab('stopwatch')}
             className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all border ${
@@ -148,6 +150,17 @@ export default function MaestroPage() {
           >
             <Award className="w-4 h-4" /> Evaluación Cualitativa
           </button>
+
+          <button
+            onClick={() => setActiveTab('best-results')}
+            className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all border ${
+              activeTab === 'best-results'
+                ? 'bg-teal-500 text-slate-950 border-teal-400 shadow-lg shadow-teal-500/20'
+                : 'bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-800'
+            }`}
+          >
+            <Table className="w-4 h-4" /> Tabla Mejores Resultados
+          </button>
         </div>
 
         {/* Active Module Content */}
@@ -187,6 +200,10 @@ export default function MaestroPage() {
               user={user}
               onRecordSaved={() => selectedStudent && loadStudentHistory(selectedStudent.ID_Alumno)}
             />
+          )}
+
+          {activeTab === 'best-results' && (
+            <BestResultsTable user={user} cicloEscolar={cicloEscolar} />
           )}
         </div>
 

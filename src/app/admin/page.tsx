@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import ExportPdfButton from '@/components/ExportPdfButton';
+import BestResultsTable from '@/components/BestResultsTable';
 import { UserSession, AdminMetrics } from '@/lib/types';
 import {
   ShieldCheck,
@@ -250,6 +251,9 @@ export default function AdminPage() {
               )}
             </div>
           </div>
+
+          {/* Table of Consolidated Best Results */}
+          <BestResultsTable user={user} cicloEscolar="2026-2027" />
         </div>
       </main>
     </div>
