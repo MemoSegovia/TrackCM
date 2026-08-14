@@ -83,7 +83,7 @@ export default function MaestroPage() {
               <h1 className="text-xl sm:text-2xl font-black text-white">Portal de Registro en Cancha</h1>
             </div>
             <p className="text-xs text-slate-400">
-              Profesor: <span className="text-emerald-400 font-bold">{user?.nombre || 'Prof. Carlos Mendoza'}</span> | Asignado: {user?.nivelAsignado || 'Todos'}
+              Profesor: <span className="text-emerald-400 font-bold">{user?.nombre || 'Prof. Carlos Mendoza'}</span>
             </p>
           </div>
 

@@ -158,13 +158,7 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
           </h2>
         </div>
 
-        {isRestrictedTeacher ? (
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1">
-            <Lock className="w-3 h-3" /> Nivel Asignado: {assignedLevel}
-          </span>
-        ) : (
-          loading && <span className="text-xs text-emerald-400 animate-pulse">Cargando lista...</span>
-        )}
+        {loading && <span className="text-xs text-emerald-400 animate-pulse">Cargando lista...</span>}
       </div>
 
       {/* Cascading dropdown grid */}
