@@ -5,11 +5,12 @@ import Navbar from '@/components/Navbar';
 import PerformanceCharts from '@/components/PerformanceCharts';
 import ExportPdfButton from '@/components/ExportPdfButton';
 import { UserSession, AlumnoInscrito, RegistroAntropometrico, RegistroAtletismo, RegistroCualitativo } from '@/lib/types';
-import { Activity, Trophy, HeartPulse, Award } from 'lucide-react';
+import { Activity, Trophy, HeartPulse, Award, Search } from 'lucide-react';
 import { calculateIMC } from '@/lib/utils';
 
 export default function AlumnoPage() {
   const [user, setUser] = useState<UserSession | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [student, setStudent] = useState<AlumnoInscrito | null>(null);
   const [historial, setHistorial] = useState<{
     antropometrico: RegistroAntropometrico[];
@@ -18,6 +19,10 @@ export default function AlumnoPage() {
   }>({ antropometrico: [], atletismo: [], cualitativo: [] });
 
   const [loading, setLoading] = useState<boolean>(true);
+  const [searched, setSearched] = useState<boolean>(false);
+
+  const rolLower = user?.rol?.toLowerCase() || '';
+  const isTeacherOrAdmin = rolLower === 'maestro' || rolLower === 'profesor' || rolLower === 'administrador' || rolLower === 'admin';
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -26,7 +31,12 @@ export default function AlumnoPage() {
         try {
           const parsed: UserSession = JSON.parse(stored);
           setUser(parsed);
-          if (parsed.correo) {
+
+          const userRol = parsed.rol?.toLowerCase() || '';
+          const isStaff = userRol === 'maestro' || userRol === 'profesor' || userRol === 'administrador' || userRol === 'admin';
+
+          if (!isStaff && parsed.correo) {
+            // Students automatically view their own history
             fetchHistorial(parsed.correo);
           } else {
             setLoading(false);
@@ -41,21 +51,36 @@ export default function AlumnoPage() {
     }
   }, []);
 
-  const fetchHistorial = async (userEmail: string) => {
-    if (!userEmail) return;
+  const fetchHistorial = async (query: string) => {
+    if (!query) return;
     try {
       setLoading(true);
-      const res = await fetch(`/api/historial?email=${encodeURIComponent(userEmail)}`);
+      setSearched(true);
+
+      const isEmail = query.includes('@');
+      const param = isEmail ? `email=${encodeURIComponent(query)}` : `studentId=${encodeURIComponent(query)}`;
+
+      const res = await fetch(`/api/historial?${param}`);
       const data = await res.json();
 
       if (data.success) {
         setStudent(data.alumno || null);
         setHistorial(data.historial || { antropometrico: [], atletismo: [], cualitativo: [] });
+      } else {
+        setStudent(null);
       }
     } catch (err) {
       console.error(err);
+      setStudent(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      fetchHistorial(searchQuery.trim());
     }
   };
 
@@ -76,21 +101,51 @@ export default function AlumnoPage() {
                 Historial del Estudiante
               </h1>
               <p className="text-xs text-slate-400">
-                {user ? `Registros pertenecientes a ${user.nombre}` : 'Consulta de registros del alumno'}
+                {isTeacherOrAdmin
+                  ? 'Consulta el historial buscando por nombre de alumno, ID o correo'
+                  : user
+                  ? `Registros pertenecientes a ${user.nombre}`
+                  : 'Consulta de expediente de educación física'}
               </p>
             </div>
 
-            {student && (
-              <ExportPdfButton
-                elementId="student-full-report"
-                fileName={`Historial_${student.Nombre_Completo.replace(/\s+/g, '_')}.pdf`}
-                title={`Historial de ${student.Nombre_Completo}`}
-                buttonText="PDF"
-              />
-            )}
+            <div className="flex flex-col sm:flex-row items-center gap-2 max-w-lg w-full justify-end">
+              {/* Search Form for Teachers and Administrators */}
+              {isTeacherOrAdmin && (
+                <form onSubmit={handleSearchSubmit} className="flex gap-2 flex-1 w-full">
+                  <div className="relative flex-1">
+                    <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                    <input
+                      type="text"
+                      placeholder="Escribe el nombre del alumno, ID o correo..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full bg-slate-950 text-slate-100 text-xs rounded-xl pl-9 pr-3 py-2.5 border border-slate-700 focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-4 py-2.5 rounded-xl font-bold text-xs bg-cyan-500 hover:bg-cyan-600 text-slate-950 transition-all shadow-md shadow-cyan-500/20 flex items-center gap-1.5"
+                  >
+                    {loading ? 'Buscando...' : 'Buscar'}
+                  </button>
+                </form>
+              )}
+
+              {/* Export PDF Button */}
+              {student && (
+                <ExportPdfButton
+                  elementId="student-full-report"
+                  fileName={`Historial_${student.Nombre_Completo.replace(/\s+/g, '_')}.pdf`}
+                  title={`Historial de ${student.Nombre_Completo}`}
+                  buttonText="PDF"
+                />
+              )}
+            </div>
           </div>
 
-          {/* Loading state */}
+          {/* Loading State */}
           {loading && (
             <div className="py-12 text-center space-y-3">
               <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto" />
@@ -98,12 +153,37 @@ export default function AlumnoPage() {
             </div>
           )}
 
-          {/* Not logged in */}
+          {/* Teacher/Admin initial state before search */}
+          {!loading && isTeacherOrAdmin && !student && (
+            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-10 text-center space-y-3 my-4">
+              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-400 mx-auto flex items-center justify-center font-bold">
+                <Search className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-white">Búsqueda de Historial de Alumnos</h3>
+              <p className="text-xs text-slate-400 max-w-md mx-auto">
+                {searched
+                  ? 'No se encontró ningún estudiante con ese nombre, ID o correo.'
+                  : 'Como Maestro o Administrador, escribe el nombre del alumno en la barra de búsqueda superior para consultar sus marcas de atletismo, avances de IMC y evaluaciones.'}
+              </p>
+            </div>
+          )}
+
+          {/* Student logged in but no profile record found */}
+          {!loading && !isTeacherOrAdmin && user && !student && (
+            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-8 text-center space-y-3 my-4">
+              <h3 className="text-base font-bold text-white">Expediente no encontrado</h3>
+              <p className="text-xs text-slate-400 max-w-md mx-auto">
+                No se encontró un registro de estudiante asociado a la cuenta <span className="text-cyan-400 font-semibold">{user.correo}</span>.
+              </p>
+            </div>
+          )}
+
+          {/* Not Logged In State */}
           {!loading && !user && (
             <div className="bg-slate-950 border border-slate-800 rounded-2xl p-8 text-center space-y-3 my-4">
               <h3 className="text-base font-bold text-white">Inicio de Sesión Requerido</h3>
               <p className="text-xs text-slate-400 max-w-md mx-auto">
-                Debes iniciar sesión con tu cuenta de estudiante para poder ver tu historial deportivo y de salud.
+                Debes iniciar sesión para poder consultar el historial deportivo y de salud.
               </p>
               <a
                 href="/login"
@@ -111,16 +191,6 @@ export default function AlumnoPage() {
               >
                 Ir a Iniciar Sesión
               </a>
-            </div>
-          )}
-
-          {/* User logged in but no student record found */}
-          {!loading && user && !student && (
-            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-8 text-center space-y-3 my-4">
-              <h3 className="text-base font-bold text-white">Expediente no encontrado</h3>
-              <p className="text-xs text-slate-400 max-w-md mx-auto">
-                No se encontró un registro de estudiante asociado a la cuenta <span className="text-cyan-400 font-semibold">{user.correo}</span>.
-              </p>
             </div>
           )}
 

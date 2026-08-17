@@ -21,6 +21,9 @@ export default function BestResultsTable({ user, cicloEscolar = '2026-2027' }: B
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  const rolLower = user?.rol?.toLowerCase() || '';
+  const isAdmin = rolLower === 'administrador' || rolLower === 'admin';
+
   // Load all students to detect which groups have enrolled students
   useEffect(() => {
     async function loadAllStudents() {
@@ -155,14 +158,16 @@ export default function BestResultsTable({ user, cicloEscolar = '2026-2027' }: B
             <Download className="w-4 h-4 text-cyan-400" /> Exportar PDF
           </button>
 
-          <a
-            href="/Pasos_Inicio_Ciclo_Escolar_TrackCM.xlsx"
-            download
-            className="py-3 px-4 rounded-2xl font-bold text-xs bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-500/40 transition-all flex items-center gap-2 shadow-md active:scale-95"
-            title="Descargar guía de pasos en Excel"
-          >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-400" /> Guía Excel Ciclos
-          </a>
+          {isAdmin && (
+            <a
+              href="/Pasos_Inicio_Ciclo_Escolar_TrackCM.xlsx"
+              download
+              className="py-3 px-4 rounded-2xl font-bold text-xs bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-500/40 transition-all flex items-center gap-2 shadow-md active:scale-95"
+              title="Descargar guía de pasos en Excel"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-400" /> Guía Excel Ciclos
+            </a>
+          )}
         </div>
       </div>
 
