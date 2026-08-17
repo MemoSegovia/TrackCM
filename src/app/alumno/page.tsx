@@ -5,12 +5,11 @@ import Navbar from '@/components/Navbar';
 import PerformanceCharts from '@/components/PerformanceCharts';
 import ExportPdfButton from '@/components/ExportPdfButton';
 import { UserSession, AlumnoInscrito, RegistroAntropometrico, RegistroAtletismo, RegistroCualitativo } from '@/lib/types';
-import { Search, Activity, Calendar, Trophy, HeartPulse, Award, UserCheck, Scale } from 'lucide-react';
+import { Activity, Trophy, HeartPulse, Award } from 'lucide-react';
 import { calculateIMC } from '@/lib/utils';
 
 export default function AlumnoPage() {
   const [user, setUser] = useState<UserSession | null>(null);
-  const [searchQuery, setSearchQuery] = useState<string>('');
   const [student, setStudent] = useState<AlumnoInscrito | null>(null);
   const [historial, setHistorial] = useState<{
     antropometrico: RegistroAntropometrico[];
@@ -18,8 +17,7 @@ export default function AlumnoPage() {
     cualitativo: RegistroCualitativo[];
   }>({ antropometrico: [], atletismo: [], cualitativo: [] });
 
-  const [loading, setLoading] = useState<boolean>(false);
-  const [searched, setSearched] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -28,28 +26,26 @@ export default function AlumnoPage() {
         try {
           const parsed: UserSession = JSON.parse(stored);
           setUser(parsed);
-          // If student logged in, automatically search by their email
           if (parsed.correo) {
-            setSearchQuery(parsed.correo);
             fetchHistorial(parsed.correo);
+          } else {
+            setLoading(false);
           }
         } catch (e) {
           console.error(e);
+          setLoading(false);
         }
+      } else {
+        setLoading(false);
       }
     }
   }, []);
 
-  const fetchHistorial = async (query: string) => {
-    if (!query) return;
+  const fetchHistorial = async (userEmail: string) => {
+    if (!userEmail) return;
     try {
       setLoading(true);
-      setSearched(true);
-
-      const isEmail = query.includes('@');
-      const param = isEmail ? `email=${encodeURIComponent(query)}` : `studentId=${encodeURIComponent(query)}`;
-
-      const res = await fetch(`/api/historial?${param}`);
+      const res = await fetch(`/api/historial?email=${encodeURIComponent(userEmail)}`);
       const data = await res.json();
 
       if (data.success) {
@@ -63,11 +59,6 @@ export default function AlumnoPage() {
     }
   };
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    fetchHistorial(searchQuery);
-  };
-
   const latestAntro = historial.antropometrico.length > 0 ? historial.antropometrico[0] : null;
   const latestImcInfo = latestAntro ? calculateIMC(latestAntro.Peso_kg, latestAntro.Estatura_cm) : null;
 
@@ -76,65 +67,65 @@ export default function AlumnoPage() {
       <Navbar user={user} />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Search Header Bar */}
+        {/* Header Bar */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-3">
             <div>
               <h1 className="text-xl font-black text-white flex items-center gap-2">
                 <Activity className="w-5 h-5 text-cyan-400" />
-                Consulta de Historial del Estudiante
+                Historial del Estudiante
               </h1>
-              <p className="text-xs text-slate-400">Ingresa tu ID de Alumno o Correo Institucional</p>
+              <p className="text-xs text-slate-400">
+                {user ? `Registros pertenecientes a ${user.nombre}` : 'Consulta de registros del alumno'}
+              </p>
             </div>
 
-            {/* Search Input Form & Export PDF */}
-            <div className="flex flex-col sm:flex-row items-center gap-2 max-w-lg w-full">
-              <form onSubmit={handleSearchSubmit} className="flex gap-2 flex-1 w-full">
-                <div className="relative flex-1">
-                  <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                  <input
-                    type="text"
-                    placeholder="ID (ej. ALU-2026-001) o Correo..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-slate-950 text-slate-100 text-xs rounded-xl pl-9 pr-3 py-2.5 border border-slate-700 focus:outline-none focus:border-cyan-500"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-4 py-2.5 rounded-xl font-bold text-xs bg-cyan-500 hover:bg-cyan-600 text-slate-950 transition-all shadow-md shadow-cyan-500/20 flex items-center gap-1.5"
-                >
-                  {loading ? 'Buscando...' : 'Buscar'}
-                </button>
-              </form>
-
-              {student && (
-                <ExportPdfButton
-                  elementId="student-full-report"
-                  fileName={`Historial_${student.Nombre_Completo.replace(/\s+/g, '_')}.pdf`}
-                  title={`Historial de ${student.Nombre_Completo}`}
-                  buttonText="PDF"
-                />
-              )}
-            </div>
+            {student && (
+              <ExportPdfButton
+                elementId="student-full-report"
+                fileName={`Historial_${student.Nombre_Completo.replace(/\s+/g, '_')}.pdf`}
+                title={`Historial de ${student.Nombre_Completo}`}
+                buttonText="PDF"
+              />
+            )}
           </div>
 
-          {/* Empty Search State */}
-          {!student && (
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-10 text-center space-y-3 shadow-xl my-4">
-              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-400 mx-auto flex items-center justify-center font-bold">
-                <Search className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-white">Consulta de Historial de Alumno</h3>
+          {/* Loading state */}
+          {loading && (
+            <div className="py-12 text-center space-y-3">
+              <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto" />
+              <p className="text-xs text-slate-400">Cargando historial del estudiante...</p>
+            </div>
+          )}
+
+          {/* Not logged in */}
+          {!loading && !user && (
+            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-8 text-center space-y-3 my-4">
+              <h3 className="text-base font-bold text-white">Inicio de Sesión Requerido</h3>
               <p className="text-xs text-slate-400 max-w-md mx-auto">
-                Ingresa el ID del Alumno, Nombre o Correo Institucional en el buscador superior para consultar su historial de atletismo, marcas de IMC y evaluaciones.
+                Debes iniciar sesión con tu cuenta de estudiante para poder ver tu historial deportivo y de salud.
+              </p>
+              <a
+                href="/login"
+                className="inline-block px-5 py-2.5 rounded-xl font-bold text-xs bg-cyan-500 hover:bg-cyan-600 text-slate-950 transition-all shadow-md shadow-cyan-500/20"
+              >
+                Ir a Iniciar Sesión
+              </a>
+            </div>
+          )}
+
+          {/* User logged in but no student record found */}
+          {!loading && user && !student && (
+            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-8 text-center space-y-3 my-4">
+              <h3 className="text-base font-bold text-white">Expediente no encontrado</h3>
+              <p className="text-xs text-slate-400 max-w-md mx-auto">
+                No se encontró un registro de estudiante asociado a la cuenta <span className="text-cyan-400 font-semibold">{user.correo}</span>.
               </p>
             </div>
           )}
 
           {/* Student Profile Header Banner & Full Report Container */}
-          {student && (
+          {!loading && student && (
             <div id="student-full-report" className="space-y-6 pt-2">
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                 <div className="sm:col-span-2 bg-slate-950 border border-slate-800 rounded-xl p-4 flex items-center gap-4">

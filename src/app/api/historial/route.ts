@@ -31,10 +31,18 @@ export async function GET(request: Request) {
     } else if (emailParam) {
       const emailClean = emailParam.trim().toLowerCase();
       const userMatch = usuarios.find((u) => u.Correo.toLowerCase() === emailClean);
-      if (userMatch && userMatch.Rol?.toLowerCase() === 'alumno') {
+      if (userMatch) {
         targetStudent =
           alumnos.find(
             (a) => a.Nombre_Completo.toLowerCase() === userMatch.Nombre.toLowerCase()
+          ) || null;
+      }
+      if (!targetStudent) {
+        targetStudent =
+          alumnos.find(
+            (a) =>
+              a.ID_Alumno.toLowerCase() === emailClean ||
+              a.Nombre_Completo.toLowerCase() === emailClean
           ) || null;
       }
     }
