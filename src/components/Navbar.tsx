@@ -74,7 +74,7 @@ export default function Navbar({ user }: NavbarProps) {
               </Link>
             )}
 
-            {pathname !== '/' && (
+            {pathname !== '/' && pathname !== '/login' && (
               <>
                 <Link
                   href="/leaderboard"
@@ -123,12 +123,14 @@ export default function Navbar({ user }: NavbarProps) {
                 </button>
               </div>
             ) : (
-              <Link
-                href="/login"
-                className="px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-md shadow-emerald-500/20 transition-all hover:scale-105"
-              >
-                Iniciar Sesión
-              </Link>
+              pathname !== '/login' && (
+                <Link
+                  href="/login"
+                  className="px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-md shadow-emerald-500/20 transition-all hover:scale-105"
+                >
+                  Iniciar Sesión
+                </Link>
+              )
             )}
           </div>
         </div>
@@ -159,7 +161,7 @@ export default function Navbar({ user }: NavbarProps) {
             </Link>
           )}
 
-          {pathname !== '/' && (
+          {pathname !== '/' && pathname !== '/login' && (
             <>
               <Link
                 href="/leaderboard"
