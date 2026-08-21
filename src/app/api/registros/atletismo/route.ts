@@ -1,5 +1,13 @@
 import { NextResponse } from 'next/server';
-import { addRegistroAtletismo, getAlumnosInscritos, getUsuarios } from '@/lib/googleSheets';
+import {
+  addRegistroAtletismo,
+  getAlumnosInscritos,
+  getRegistrosAtletismo,
+  getRegistrosCualitativos,
+  getUsuarios,
+  updateGrupoMejoresResultadosSheet,
+} from '@/lib/googleSheets';
+import { calculateBestMarksForStudent, isStudentInGrupo } from '@/lib/mejoresResultados';
 import { generateRecordId, getCurrentDateISO } from '@/lib/utils';
 import { RegistroAtletismo } from '@/lib/types';
 
@@ -46,9 +54,34 @@ export async function POST(request: Request) {
       );
     }
 
+    // Auto-consolidate and sync group best results to Google Sheets
+    if (stObj) {
+      const studentGrupo = (stObj.Grupo || '').trim() || (stObj.Grado ? `${stObj.Grado}${stObj.Grupo}` : '');
+      if (studentGrupo) {
+        try {
+          const [allAtl, allCual] = await Promise.all([
+            getRegistrosAtletismo(),
+            getRegistrosCualitativos(),
+          ]);
+          const groupStudents = alumnos.filter((a) => isStudentInGrupo(a, studentGrupo));
+          const rowsData = groupStudents.map((st) =>
+            calculateBestMarksForStudent(st, allAtl, allCual)
+          );
+          await updateGrupoMejoresResultadosSheet(
+            studentGrupo,
+            cicloEscolar || '2026-2027',
+            nombreMaestro || (tchObj ? tchObj.Nombre : 'Profesor de Educación Física'),
+            rowsData
+          );
+        } catch (syncErr) {
+          console.warn('Auto-sync to Tabla de Mejores Resultados Consolidados failed:', syncErr);
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'Marca de atletismo registrada exitosamente',
+      message: 'Marca de atletismo registrada y consolidada exitosamente en la Tabla de Mejores Resultados',
       record,
     });
   } catch (error) {

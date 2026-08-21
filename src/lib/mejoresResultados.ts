@@ -161,9 +161,9 @@ export function calculateBestMarksForStudent(
   const cuerdaCual = studentCual.filter((r) => r.Deporte_o_Prueba.toLowerCase().includes('cuerda'));
   let bestCuerda = '-';
   if (cuerdaAtl.length > 0) {
-    bestCuerda = cuerdaAtl[0].Resultado_Principal;
+    bestCuerda = cuerdaAtl[cuerdaAtl.length - 1].Resultado_Principal;
   } else if (cuerdaCual.length > 0) {
-    bestCuerda = cuerdaCual[0].Calificacion;
+    bestCuerda = cuerdaCual[cuerdaCual.length - 1].Calificacion;
   }
 
   // 6. Orden y Control
@@ -171,9 +171,9 @@ export function calculateBestMarksForStudent(
   const ordenCual = studentCual.filter((r) => r.Deporte_o_Prueba.toLowerCase().includes('orden'));
   let bestOrden = '-';
   if (ordenAtl.length > 0) {
-    bestOrden = ordenAtl[0].Resultado_Principal;
+    bestOrden = ordenAtl[ordenAtl.length - 1].Resultado_Principal;
   } else if (ordenCual.length > 0) {
-    bestOrden = ordenCual[0].Calificacion;
+    bestOrden = ordenCual[ordenCual.length - 1].Calificacion;
   }
 
   // 7. ABC (ABC Atletismo)
@@ -181,9 +181,9 @@ export function calculateBestMarksForStudent(
   const abcCual = studentCual.filter((r) => r.Deporte_o_Prueba.toLowerCase().includes('abc'));
   let bestABC = '-';
   if (abcAtl.length > 0) {
-    bestABC = abcAtl[0].Resultado_Principal;
+    bestABC = abcAtl[abcAtl.length - 1].Resultado_Principal;
   } else if (abcCual.length > 0) {
-    bestABC = abcCual[0].Calificacion;
+    bestABC = abcCual[abcCual.length - 1].Calificacion;
   }
 
   return {

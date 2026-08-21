@@ -48,16 +48,18 @@ export function getCurrentDateISO(): string {
 }
 
 export function parseSecondsFromFormattedTime(timeStr: string): number {
-  if (!timeStr) return 999999;
-  // formats like "01:23.45 s" or "12.45 s"
-  const cleanStr = timeStr.replace(' s', '').trim();
+  if (!timeStr || timeStr === '-' || timeStr.toLowerCase().includes('no completada')) return 999999;
+  const cleanStr = timeStr.replace(/\s*s$/i, '').trim();
   const parts = cleanStr.split(':');
   if (parts.length === 2) {
     const mins = parseFloat(parts[0]);
     const secs = parseFloat(parts[1]);
-    return mins * 60 + secs;
+    if (!isNaN(mins) && !isNaN(secs)) {
+      return mins * 60 + secs;
+    }
   }
-  return parseFloat(cleanStr) || 999999;
+  const val = parseFloat(cleanStr);
+  return isNaN(val) ? 999999 : val;
 }
 
 export function parseDistanceInMeters(distStr: string): number {

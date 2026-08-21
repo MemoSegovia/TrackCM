@@ -157,7 +157,7 @@ export default function StopwatchModule({
 
       const data = await res.json();
       if (data.success) {
-        setSuccessMsg(`¡Marca guardada exitosamente en la base de datos! (${formattedTotal})`);
+        setSuccessMsg(`¡Marca (${formattedTotal}) registrada y consolidada exitosamente en la Tabla de Mejores Resultados!`);
         handleReset();
         if (onRecordSaved) onRecordSaved();
       } else {
@@ -334,7 +334,7 @@ export default function StopwatchModule({
         if (data.success) savedCount++;
       }
 
-      setSuccessMsg(`¡Se guardaron ${savedCount} registros de carrera en la base de datos!`);
+      setSuccessMsg(`¡Se guardaron y consolidaron ${savedCount} marcas de carrera exitosamente en la Tabla de Mejores Resultados Consolidados!`);
       handleResetMultiRace();
       if (onRecordSaved) onRecordSaved();
     } catch (err) {

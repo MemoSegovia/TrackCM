@@ -5,8 +5,9 @@ import Navbar from '@/components/Navbar';
 import PerformanceCharts from '@/components/PerformanceCharts';
 import ExportPdfButton from '@/components/ExportPdfButton';
 import { UserSession, AlumnoInscrito, RegistroAntropometrico, RegistroAtletismo, RegistroCualitativo } from '@/lib/types';
-import { Activity, Trophy, HeartPulse, Award, Search } from 'lucide-react';
+import { Activity, Trophy, HeartPulse, Award, Search, Table, RefreshCw, Zap, CheckCircle } from 'lucide-react';
 import { calculateIMC } from '@/lib/utils';
+import { calculateBestMarksForStudent } from '@/lib/mejoresResultados';
 
 export default function AlumnoPage() {
   const [user, setUser] = useState<UserSession | null>(null);
@@ -20,9 +21,49 @@ export default function AlumnoPage() {
 
   const [loading, setLoading] = useState<boolean>(true);
   const [searched, setSearched] = useState<boolean>(false);
+  const [syncingConsolidado, setSyncingConsolidado] = useState<boolean>(false);
+  const [syncMsg, setSyncMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const rolLower = user?.rol?.toLowerCase() || '';
   const isTeacherOrAdmin = rolLower === 'maestro' || rolLower === 'profesor' || rolLower === 'administrador' || rolLower === 'admin';
+
+  const handleSyncConsolidado = async () => {
+    if (!student) return;
+    try {
+      setSyncingConsolidado(true);
+      setSyncMsg(null);
+      const studentGrupo = (student.Grupo || '').trim() || `${student.Grado || ''}${student.Grupo || ''}`;
+      const res = await fetch('/api/mejores-resultados', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          grupo: studentGrupo,
+          cicloEscolar: student.Ciclo_Escolar || '2026-2027',
+          nombreMaestro: user?.nombre || 'Profesor de Educación Física',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSyncMsg({
+          type: 'success',
+          text: `¡Los mejores resultados y tiempos de ${student.Nombre_Completo} han sido registrados y sincronizados exitosamente en la Tabla Consolidada de Google Sheets (Pestaña "${studentGrupo}")!`,
+        });
+      } else {
+        setSyncMsg({
+          type: 'error',
+          text: data.error || 'Error al sincronizar con Google Sheets',
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      setSyncMsg({
+        type: 'error',
+        text: 'Error de red al sincronizar la tabla consolidada',
+      });
+    } finally {
+      setSyncingConsolidado(false);
+    }
+  };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -243,6 +284,123 @@ export default function AlumnoPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Consolidated Best Results Card for the Student */}
+              {(() => {
+                const bestMarks = calculateBestMarksForStudent(student, historial.atletismo, historial.cualitativo);
+                const studentGrupo = (student.Grupo || '').trim() || `${student.Grado || ''}${student.Grupo || ''}`;
+
+                return (
+                  <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-emerald-950/40 border border-slate-800 rounded-2xl p-5 shadow-2xl space-y-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                          <Table className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-black text-white flex items-center gap-2">
+                            Tabla de Mejores Resultados Consolidados
+                            <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              Pestaña "{studentGrupo}"
+                            </span>
+                          </h3>
+                          <p className="text-xs text-slate-400">
+                            Marcas más destacadas y mejores tiempos registrados del estudiante
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={handleSyncConsolidado}
+                        disabled={syncingConsolidado}
+                        className="w-full sm:w-auto py-2.5 px-4 rounded-xl font-extrabold text-xs bg-emerald-500 hover:bg-emerald-600 text-slate-950 transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95 disabled:opacity-40"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${syncingConsolidado ? 'animate-spin' : ''}`} />
+                        {syncingConsolidado ? 'Registrando...' : 'Registrar en Tabla Consolidada (Google Sheets)'}
+                      </button>
+                    </div>
+
+                    {syncMsg && (
+                      <div
+                        className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
+                          syncMsg.type === 'success'
+                            ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
+                            : 'bg-rose-500/10 border border-rose-500/30 text-rose-400'
+                        }`}
+                      >
+                        <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                        {syncMsg.text}
+                      </div>
+                    )}
+
+                    {/* Grid of 7 Pillars */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+                      {/* Velocidad */}
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 text-center space-y-1 relative overflow-hidden">
+                        <div className="text-[10px] font-extrabold text-emerald-400 uppercase tracking-wider flex items-center justify-center gap-1">
+                          <Zap className="w-3 h-3" /> Velocidad
+                        </div>
+                        <p className="text-sm font-black text-white font-mono">{bestMarks.velocidad}</p>
+                        <p className="text-[9px] text-slate-500 font-semibold">Mejor Tiempo</p>
+                      </div>
+
+                      {/* Salto */}
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 text-center space-y-1">
+                        <div className="text-[10px] font-extrabold text-amber-400 uppercase tracking-wider">
+                          Salto
+                        </div>
+                        <p className="text-sm font-black text-white font-mono">{bestMarks.salto}</p>
+                        <p className="text-[9px] text-slate-500 font-semibold">Mejor Distancia</p>
+                      </div>
+
+                      {/* Lanzamiento */}
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 text-center space-y-1">
+                        <div className="text-[10px] font-extrabold text-amber-300 uppercase tracking-wider">
+                          Lanzamiento
+                        </div>
+                        <p className="text-sm font-black text-white font-mono">{bestMarks.lanzamiento}</p>
+                        <p className="text-[9px] text-slate-500 font-semibold">Mejor Distancia</p>
+                      </div>
+
+                      {/* Resistencia */}
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 text-center space-y-1">
+                        <div className="text-[10px] font-extrabold text-cyan-400 uppercase tracking-wider">
+                          Resistencia
+                        </div>
+                        <p className="text-sm font-black text-white font-mono">{bestMarks.resistencia}</p>
+                        <p className="text-[9px] text-slate-500 font-semibold">Mejor Tiempo</p>
+                      </div>
+
+                      {/* Cuerda */}
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 text-center space-y-1">
+                        <div className="text-[10px] font-extrabold text-purple-400 uppercase tracking-wider">
+                          Cuerda
+                        </div>
+                        <p className="text-sm font-black text-white font-mono">{bestMarks.cuerda}</p>
+                        <p className="text-[9px] text-slate-500 font-semibold">Resultado</p>
+                      </div>
+
+                      {/* Orden y Control */}
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 text-center space-y-1">
+                        <div className="text-[10px] font-extrabold text-indigo-400 uppercase tracking-wider">
+                          Orden/Control
+                        </div>
+                        <p className="text-sm font-black text-white font-mono">{bestMarks.ordenYControl}</p>
+                        <p className="text-[9px] text-slate-500 font-semibold">Evaluación</p>
+                      </div>
+
+                      {/* ABC */}
+                      <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 text-center space-y-1">
+                        <div className="text-[10px] font-extrabold text-pink-400 uppercase tracking-wider">
+                          ABC
+                        </div>
+                        <p className="text-sm font-black text-white font-mono">{bestMarks.abc}</p>
+                        <p className="text-[9px] text-slate-500 font-semibold">Evaluación</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Progression Charts Section */}
               <PerformanceCharts
