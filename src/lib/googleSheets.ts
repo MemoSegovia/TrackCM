@@ -90,16 +90,20 @@ export async function getAlumnosInscritos(): Promise<AlumnoInscrito[]> {
     const rows = res.data.values;
     if (!rows || rows.length === 0) return MOCK_ALUMNOS;
 
-    return rows.map((r) => ({
-      ID_Alumno: r[0] || '',
-      Nombre_Completo: r[1] || '',
-      Fecha_Nacimiento: r[2] || '',
-      Genero: r[3] || '',
-      Nivel: r[4] || '',
-      Grado: r[5] || '',
-      Grupo: r[6] || '',
-      Ciclo_Escolar: r[7] || '',
-    }));
+    return rows.map((r, index) => {
+      const rawId = (r[0] || '').trim();
+      const fallbackId = `ALU-${String(index + 1).padStart(4, '0')}`;
+      return {
+        ID_Alumno: rawId || fallbackId,
+        Nombre_Completo: r[1] || '',
+        Fecha_Nacimiento: r[2] || '',
+        Genero: r[3] || '',
+        Nivel: r[4] || '',
+        Grado: r[5] || '',
+        Grupo: r[6] || '',
+        Ciclo_Escolar: r[7] || '',
+      };
+    });
   } catch (err) {
     console.error('Error fetching Alumnos_Inscritos from Sheets:', err);
     return MOCK_ALUMNOS;

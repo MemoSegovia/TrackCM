@@ -16,16 +16,31 @@ export async function POST(request: Request) {
     const usuarios = await getUsuarios();
     const emailClean = email.trim().toLowerCase();
 
-    const matchedUser = usuarios.find(
-      (u) => u.Correo.toLowerCase() === emailClean && u.Password === password
+    const matchedUsers = usuarios.filter(
+      (u) => u.Correo.trim().toLowerCase() === emailClean && u.Password === password
     );
 
-    if (!matchedUser) {
+    if (matchedUsers.length === 0) {
       return NextResponse.json(
         { success: false, error: 'Correo o contraseña incorrectos' },
         { status: 401 }
       );
     }
+
+    const matchedUser = matchedUsers[0];
+
+    // Combine all assigned levels across matching user rows or comma/slash separated strings
+    const assignedLevelsSet = new Set<string>();
+    matchedUsers.forEach((u) => {
+      if (u.Nivel_Asignado) {
+        u.Nivel_Asignado.split(/[,/;]+/).forEach((lvl) => {
+          const trimmed = lvl.trim();
+          if (trimmed) assignedLevelsSet.add(trimmed);
+        });
+      }
+    });
+
+    const nivelAsignadoCombined = Array.from(assignedLevelsSet).join(', ');
 
     return NextResponse.json({
       success: true,
@@ -34,7 +49,7 @@ export async function POST(request: Request) {
         nombre: matchedUser.Nombre,
         correo: matchedUser.Correo,
         rol: matchedUser.Rol,
-        nivelAsignado: matchedUser.Nivel_Asignado,
+        nivelAsignado: nivelAsignadoCombined || matchedUser.Nivel_Asignado,
       },
     });
   } catch (error: any) {

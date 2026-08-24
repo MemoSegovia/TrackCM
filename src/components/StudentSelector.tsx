@@ -12,6 +12,7 @@ interface StudentSelectorProps {
 
 export default function StudentSelector({ onSelectStudent, user, selectedStudentId }: StudentSelectorProps) {
   const [alumnos, setAlumnos] = useState<AlumnoInscrito[]>([]);
+  const [userLevelsByEmail, setUserLevelsByEmail] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState<boolean>(true);
 
   // Selector state
@@ -28,15 +29,38 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
   const [grupos, setGrupos] = useState<string[]>([]);
   const [filteredAlumnos, setFilteredAlumnos] = useState<AlumnoInscrito[]>([]);
 
-  // Check if teacher is restricted to a specific level
+  // Calculate teacher assigned levels
   const userRoleLower = user?.rol?.toLowerCase() || '';
-  const assignedLevel = user?.nivelAsignado;
-  const isRestrictedTeacher = Boolean(
-    userRoleLower === 'maestro' &&
-    assignedLevel &&
-    assignedLevel !== 'Todos' &&
-    assignedLevel !== 'Administrador'
-  );
+  const userEmailLower = user?.correo?.trim().toLowerCase() || '';
+
+  const sessionAssigned = user?.nivelAsignado || '';
+  const mappedAssigned = userEmailLower && userLevelsByEmail[userEmailLower]
+    ? userLevelsByEmail[userEmailLower]
+    : [];
+
+  const rawAssignedList: string[] = [];
+  if (sessionAssigned) {
+    sessionAssigned.split(/[,/;]+/).forEach((s) => {
+      const clean = s.trim();
+      if (clean && !rawAssignedList.some((r) => r.toLowerCase() === clean.toLowerCase())) {
+        rawAssignedList.push(clean);
+      }
+    });
+  }
+
+  mappedAssigned.forEach((lvl) => {
+    if (!rawAssignedList.some((r) => r.toLowerCase() === lvl.toLowerCase())) {
+      rawAssignedList.push(lvl);
+    }
+  });
+
+  const isUnlimitedTeacher =
+    !user ||
+    userRoleLower === 'administrador' ||
+    userRoleLower === 'admin' ||
+    rawAssignedList.some((l) => l.toLowerCase() === 'todos');
+
+  const isRestrictedTeacher = userRoleLower === 'maestro' && !isUnlimitedTeacher;
 
   useEffect(() => {
     async function loadData() {
@@ -46,8 +70,11 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
         const data = await res.json();
         if (data.success) {
           setAlumnos(data.alumnos || []);
+          if (data.userLevelsByEmail) {
+            setUserLevelsByEmail(data.userLevelsByEmail);
+          }
           setCiclos(data.filters?.ciclos || ['2026-2027']);
-          
+
           if (data.filters?.ciclos?.length > 0) {
             setSelectedCiclo(data.filters.ciclos[0]);
           }
@@ -66,26 +93,37 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
     const list = alumnos.filter((a) => a.Ciclo_Escolar === selectedCiclo);
     let availableNiveles = Array.from(new Set(list.map((a) => a.Nivel))).filter(Boolean);
 
-    // Filter to official levels if list is empty or fallback
     if (availableNiveles.length === 0) {
       availableNiveles = [...NIVELES_ESCOLARES_OFICIALES];
     }
 
-    if (isRestrictedTeacher && assignedLevel) {
-      const cleanAssigned = assignedLevel.trim().toLowerCase();
-      const officialMatch =
-        NIVELES_ESCOLARES_OFICIALES.find((n) => n.toLowerCase() === cleanAssigned) ||
-        assignedLevel;
+    if (isRestrictedTeacher && rawAssignedList.length > 0) {
+      const matchedLevels: string[] = [];
 
-      setNiveles([officialMatch]);
-      setSelectedNivel(officialMatch);
+      rawAssignedList.forEach((assigned) => {
+        const cleanAssigned = assigned.trim().toLowerCase();
+        const officialMatch =
+          NIVELES_ESCOLARES_OFICIALES.find((n) => n.toLowerCase() === cleanAssigned) ||
+          availableNiveles.find((n) => n.toLowerCase() === cleanAssigned) ||
+          assigned;
+
+        if (!matchedLevels.some((m) => m.toLowerCase() === officialMatch.toLowerCase())) {
+          matchedLevels.push(officialMatch);
+        }
+      });
+
+      setNiveles(matchedLevels);
+
+      if (matchedLevels.length > 0 && (!selectedNivel || !matchedLevels.some((m) => m.toLowerCase() === selectedNivel.toLowerCase()))) {
+        setSelectedNivel(matchedLevels[0]);
+      }
     } else {
       setNiveles(availableNiveles);
       if (availableNiveles.length > 0 && (!selectedNivel || !availableNiveles.includes(selectedNivel))) {
         setSelectedNivel(availableNiveles[0]);
       }
     }
-  }, [selectedCiclo, alumnos, isRestrictedTeacher, assignedLevel]);
+  }, [selectedCiclo, alumnos, isRestrictedTeacher, rawAssignedList.join(',')]);
 
   // Update grades available for chosen Ciclo + Nivel
   useEffect(() => {
@@ -131,7 +169,10 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
     );
     setFilteredAlumnos(list);
 
-    const exists = list.find((a) => a.ID_Alumno === selectedAlumnoId);
+    const exists = selectedAlumnoId
+      ? list.find((a) => a.ID_Alumno && a.ID_Alumno === selectedAlumnoId)
+      : null;
+
     if (exists) {
       onSelectStudent(exists, selectedCiclo, list);
     } else {
@@ -142,11 +183,17 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
 
   const handleStudentChange = (id: string) => {
     setSelectedAlumnoId(id);
+    if (!id) {
+      onSelectStudent(null, selectedCiclo, filteredAlumnos);
+      return;
+    }
     const st = alumnos.find((a) => a.ID_Alumno === id) || null;
     onSelectStudent(st, selectedCiclo, filteredAlumnos);
   };
 
-  const selectedStudentObj = alumnos.find((a) => a.ID_Alumno === selectedAlumnoId);
+  const selectedStudentObj = selectedAlumnoId
+    ? alumnos.find((a) => a.ID_Alumno && a.ID_Alumno === selectedAlumnoId) || null
+    : null;
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
@@ -181,29 +228,22 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
           </select>
         </div>
 
-        {/* Nivel Escolar (Fixed for restricted teacher, dropdown for admin) */}
+        {/* Nivel Escolar */}
         <div>
           <label className="block text-xs font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
             <GraduationCap className="w-3.5 h-3.5 text-slate-400" /> Nivel Escolar
           </label>
-          {isRestrictedTeacher ? (
-            <div className="w-full bg-slate-950 text-amber-400 font-bold text-sm rounded-xl px-3.5 py-2.5 border border-amber-500/40 flex items-center justify-between shadow-inner select-none cursor-default">
-              <span>{selectedNivel || assignedLevel}</span>
-              <Lock className="w-3.5 h-3.5 text-amber-400 opacity-80" />
-            </div>
-          ) : (
-            <select
-              value={selectedNivel}
-              onChange={(e) => setSelectedNivel(e.target.value)}
-              className="w-full bg-slate-800/80 text-slate-100 text-sm rounded-xl px-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 transition-colors"
-            >
-              {niveles.map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          )}
+          <select
+            value={selectedNivel}
+            onChange={(e) => setSelectedNivel(e.target.value)}
+            className="w-full bg-slate-800/80 text-slate-100 text-sm rounded-xl px-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 transition-colors font-medium text-amber-300 sm:text-slate-100"
+          >
+            {niveles.map((n) => (
+              <option key={n} value={n} className="bg-slate-900 text-white">
+                {n}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Grado */}
