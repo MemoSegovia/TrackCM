@@ -2,8 +2,6 @@ import { AlumnoInscrito, RegistroAtletismo, RegistroCualitativo } from './types'
 import { parseSecondsFromFormattedTime, parseDistanceInMeters } from './utils';
 
 export const PESTANIAS_GRUPOS_OFICIALES = [
-  // Kinder
-  'K1', 'K2', 'K3',
   // Primaria Menor
   '1A', '1B', '1C', '2A', '2B', '2C', '3A', '3B', '3C',
   // Primaria Mayor
@@ -20,30 +18,18 @@ export function isStudentInGrupo(a: AlumnoInscrito, targetGrupo: string): boolea
   const rawGrado = (a.Grado || '').trim().toUpperCase();
   const rawNivel = (a.Nivel || '').trim().toUpperCase();
 
-  // Direct match (e.g. Grupo === "1A" or "K1")
+  // Direct match (e.g. Grupo === "1A")
   if (rawGrupo === target) return true;
 
   // Grado + Grupo combination (e.g. Grado "1" + Grupo "A" => "1A")
   const combo = `${rawGrado}${rawGrupo}`.replace(/[^A-Z0-9]/g, '');
   if (combo === target) return true;
 
-  // Kinder cases: K1, K2, K3
-  if (target.startsWith('K')) {
-    const kNum = target.replace('K', '');
-    if (
-      (rawNivel.includes('KINDER') || rawNivel.includes('PRE')) &&
-      (rawGrado === kNum || rawGrupo === kNum || rawGrado === target || rawGrupo === target)
-    ) {
-      return true;
-    }
-  }
-
   return false;
 }
 
 export function getNivelByGrupo(grupoName: string): string {
   const g = (grupoName || '').trim().toUpperCase();
-  if (['K1', 'K2', 'K3'].includes(g)) return 'Kinder';
   if (['1A', '1B', '1C', '2A', '2B', '2C', '3A', '3B', '3C'].includes(g)) return 'Primaria Menor';
   if (['4A', '4B', '4C', '5A', '5B', '5C', '6A', '6B', '6C'].includes(g)) return 'Primaria Mayor';
   if (['7A', '7B', '7C', '8A', '8B', '8C', '9A', '9B', '9C'].includes(g)) return 'Secundaria';

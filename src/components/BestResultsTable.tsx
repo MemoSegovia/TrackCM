@@ -136,7 +136,7 @@ export default function BestResultsTable({ user, cicloEscolar = '2026-2027' }: B
           <div>
             <h3 className="text-xl font-black text-white">Tabla de Mejores Resultados Consolidados</h3>
             <p className="text-xs text-slate-400">
-              Visualización y sincronización por pestaña de grupo (K1 a 12D)
+              Visualización y sincronización por pestaña de grupo (1A a 12D)
             </p>
           </div>
         </div>
