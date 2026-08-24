@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Activity, Award, UserCheck, LogOut, ShieldCheck, Dumbbell, BarChart3 } from 'lucide-react';
+import { Activity, Award, UserCheck, LogOut, ShieldCheck, Dumbbell, BarChart3, Wifi, WifiOff, RefreshCw, HardDrive } from 'lucide-react';
 import { UserSession } from '@/lib/types';
+import { getOfflineQueue, syncOfflineQueue } from '@/lib/offlineManager';
 
 interface NavbarProps {
   user?: UserSession | null;
@@ -13,6 +14,48 @@ interface NavbarProps {
 export default function Navbar({ user }: NavbarProps) {
   const pathname = usePathname();
   const router = useRouter();
+
+  const [isOnline, setIsOnline] = useState<boolean>(true);
+  const [pendingQueueCount, setPendingQueueCount] = useState<number>(0);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    setIsOnline(navigator.onLine);
+    setPendingQueueCount(getOfflineQueue().length);
+
+    const handleStatusChange = (e: any) => {
+      if (e.detail && typeof e.detail.isOnline === 'boolean') {
+        setIsOnline(e.detail.isOnline);
+      } else {
+        setIsOnline(navigator.onLine);
+      }
+    };
+
+    const handleQueueChange = () => {
+      setPendingQueueCount(getOfflineQueue().length);
+    };
+
+    window.addEventListener('online', handleStatusChange);
+    window.addEventListener('offline', handleStatusChange);
+    window.addEventListener('trackcm_offline_status_change', handleStatusChange as EventListener);
+    window.addEventListener('trackcm_queue_updated', handleQueueChange as EventListener);
+
+    return () => {
+      window.removeEventListener('online', handleStatusChange);
+      window.removeEventListener('offline', handleStatusChange);
+      window.removeEventListener('trackcm_offline_status_change', handleStatusChange as EventListener);
+      window.removeEventListener('trackcm_queue_updated', handleQueueChange as EventListener);
+    };
+  }, []);
+
+  const handleManualSync = async () => {
+    setIsSyncing(true);
+    await syncOfflineQueue();
+    setPendingQueueCount(getOfflineQueue().length);
+    setIsSyncing(false);
+  };
 
   const handleLogout = () => {
     if (typeof window !== 'undefined') {
@@ -103,8 +146,39 @@ export default function Navbar({ user }: NavbarProps) {
             )}
           </nav>
 
-          {/* Right User Controls */}
-          <div className="flex items-center gap-3">
+          {/* Right User Controls & Network Status */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Network Status Badge */}
+            {isOnline ? (
+              <span
+                className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                title="Conexión activa a internet"
+              >
+                <Wifi className="w-3.5 h-3.5" /> En línea
+              </span>
+            ) : (
+              <span
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse"
+                title="Modo Sin Conexión - Los cambios se guardan localmente"
+              >
+                <WifiOff className="w-3.5 h-3.5" /> Sin conexión
+              </span>
+            )}
+
+            {/* Offline Pending Queue Badge */}
+            {pendingQueueCount > 0 && (
+              <button
+                onClick={handleManualSync}
+                disabled={!isOnline || isSyncing}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md transition-all active:scale-95 disabled:opacity-75"
+                title={isOnline ? 'Haga clic para sincronizar registros pendientes' : 'Conecte a internet para sincronizar'}
+              >
+                <HardDrive className="w-3.5 h-3.5" />
+                <span>{pendingQueueCount} pend.</span>
+                <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
+              </button>
+            )}
+
             {user ? (
               <div className="flex items-center gap-3">
                 <div className="hidden sm:flex flex-col items-end">

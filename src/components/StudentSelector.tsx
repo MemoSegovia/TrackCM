@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { AlumnoInscrito, UserSession, NIVELES_ESCOLARES_OFICIALES } from '@/lib/types';
-import { Filter, User, Layers, GraduationCap, Calendar, CheckCircle2, Lock } from 'lucide-react';
+import { Filter, User, Layers, GraduationCap, Calendar, CheckCircle2, Lock, WifiOff } from 'lucide-react';
+import { saveStudentsCache, getStudentsCache } from '@/lib/offlineManager';
 
 interface StudentSelectorProps {
   onSelectStudent: (student: AlumnoInscrito | null, ciclo: string, groupStudents?: AlumnoInscrito[]) => void;
@@ -62,6 +63,8 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
 
   const isRestrictedTeacher = userRoleLower === 'maestro' && !isUnlimitedTeacher;
 
+  const [isOfflineData, setIsOfflineData] = useState<boolean>(false);
+
   useEffect(() => {
     async function loadData() {
       try {
@@ -69,18 +72,36 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
         const res = await fetch('/api/estudiantes');
         const data = await res.json();
         if (data.success) {
-          setAlumnos(data.alumnos || []);
+          const loadedAlumnos = data.alumnos || [];
+          setAlumnos(loadedAlumnos);
           if (data.userLevelsByEmail) {
             setUserLevelsByEmail(data.userLevelsByEmail);
           }
+          saveStudentsCache(loadedAlumnos, data.userLevelsByEmail);
           setCiclos(data.filters?.ciclos || ['2026-2027']);
 
           if (data.filters?.ciclos?.length > 0) {
             setSelectedCiclo(data.filters.ciclos[0]);
           }
+          setIsOfflineData(false);
+        } else {
+          throw new Error('API request returned failure');
         }
       } catch (err) {
-        console.error('Error loading students:', err);
+        console.warn('Network error or offline mode. Loading cached student data:', err);
+        const cached = getStudentsCache();
+        if (cached.alumnos && cached.alumnos.length > 0) {
+          setAlumnos(cached.alumnos);
+          if (cached.userLevelsByEmail) {
+            setUserLevelsByEmail(cached.userLevelsByEmail);
+          }
+          const uniqueCiclos = Array.from(new Set(cached.alumnos.map((a) => a.Ciclo_Escolar))).filter(Boolean);
+          if (uniqueCiclos.length > 0) {
+            setCiclos(uniqueCiclos);
+            setSelectedCiclo(uniqueCiclos[0]);
+          }
+          setIsOfflineData(true);
+        }
       } finally {
         setLoading(false);
       }
@@ -205,7 +226,14 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
           </h2>
         </div>
 
-        {loading && <span className="text-xs text-emerald-400 animate-pulse">Cargando lista...</span>}
+        <div className="flex items-center gap-2">
+          {loading && <span className="text-xs text-emerald-400 animate-pulse">Cargando lista...</span>}
+          {isOfflineData && (
+            <span className="text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-1 rounded-full flex items-center gap-1 font-semibold">
+              <WifiOff className="w-3.5 h-3.5" /> Alumnos (Caché Local Offline)
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Cascading dropdown grid */}

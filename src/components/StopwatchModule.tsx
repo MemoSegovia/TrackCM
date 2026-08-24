@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, Flag, Send, Timer, CheckCircle, Users, UserPlus, Zap, Trash2, Ban } from 'lucide-react';
 import { formatStopwatchTime } from '@/lib/utils';
 import { AlumnoInscrito, UserSession, MultiStudentRunner } from '@/lib/types';
+import { submitRecord } from '@/lib/offlineManager';
 
 interface StopwatchModuleProps {
   selectedStudent: AlumnoInscrito | null;
@@ -149,23 +150,17 @@ export default function StopwatchModule({
         puntos: 95,
       };
 
-      const res = await fetch('/api/registros/atletismo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        setSuccessMsg(`¡Marca (${formattedTotal}) registrada y consolidada exitosamente en la Tabla de Mejores Resultados!`);
+      const res = await submitRecord('atletismo', '/api/registros/atletismo', body);
+      if (res.success) {
+        setSuccessMsg(res.message);
         handleReset();
         if (onRecordSaved) onRecordSaved();
       } else {
-        setErrorMsg(data.error || 'Error al guardar la marca');
+        setErrorMsg(res.message || 'Error al guardar la marca');
       }
     } catch (err) {
       console.error(err);
-      setErrorMsg('Error de red al conectar con el servidor');
+      setErrorMsg('Error al procesar el registro');
     } finally {
       setIsSubmitting(false);
     }
@@ -196,23 +191,17 @@ export default function StopwatchModule({
         puntos: 0,
       };
 
-      const res = await fetch('/api/registros/atletismo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        setSuccessMsg(`¡Registro guardado como "No Completada" para ${selectedStudent.Nombre_Completo}!`);
+      const res = await submitRecord('atletismo', '/api/registros/atletismo', body);
+      if (res.success) {
+        setSuccessMsg(res.message);
         handleReset();
         if (onRecordSaved) onRecordSaved();
       } else {
-        setErrorMsg(data.error || 'Error al guardar el registro');
+        setErrorMsg(res.message || 'Error al guardar el registro');
       }
     } catch (err) {
       console.error(err);
-      setErrorMsg('Error de red al conectar con el servidor');
+      setErrorMsg('Error al procesar el registro');
     } finally {
       setIsSubmitting(false);
     }
@@ -325,13 +314,8 @@ export default function StopwatchModule({
           puntos: isUncomp ? 0 : 95,
         };
 
-        const res = await fetch('/api/registros/atletismo', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-        const data = await res.json();
-        if (data.success) savedCount++;
+        const res = await submitRecord('atletismo', '/api/registros/atletismo', body);
+        if (res.success) savedCount++;
       }
 
       setSuccessMsg(`¡Se guardaron y consolidaron ${savedCount} marcas de carrera exitosamente en la Tabla de Mejores Resultados Consolidados!`);

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Scale, HeartPulse, Send, CheckCircle, Info } from 'lucide-react';
 import { calculateIMC } from '@/lib/utils';
 import { AlumnoInscrito, UserSession } from '@/lib/types';
+import { submitRecord } from '@/lib/offlineManager';
 
 interface AnthropometricModuleProps {
   selectedStudent: AlumnoInscrito | null;
@@ -55,20 +56,15 @@ export default function AnthropometricModule({
         estaturaCm: estaturaNum,
       };
 
-      const res = await fetch('/api/registros/antropometrico', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      const res = await submitRecord('antropometrico', '/api/registros/antropometrico', body);
 
-      const data = await res.json();
-      if (data.success) {
-        setSuccessMsg(`Ficha registrada. IMC: ${imcInfo.imc} (${imcInfo.categoria})`);
+      if (res.success) {
+        setSuccessMsg(res.message);
         setPeso('');
         setEstatura('');
         if (onRecordSaved) onRecordSaved();
       } else {
-        setErrorMsg(data.error || 'Error al guardar registro antropométrico');
+        setErrorMsg(res.message || 'Error al guardar registro antropométrico');
       }
     } catch (err) {
       console.error(err);

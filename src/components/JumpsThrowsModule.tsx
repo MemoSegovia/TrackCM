@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Trophy, Star, Send, CheckCircle, Target, Ban } from 'lucide-react';
 import { AlumnoInscrito, UserSession } from '@/lib/types';
+import { submitRecord } from '@/lib/offlineManager';
 
 interface JumpsThrowsModuleProps {
   selectedStudent: AlumnoInscrito | null;
@@ -68,21 +69,16 @@ export default function JumpsThrowsModule({
         puntos: 92,
       };
 
-      const res = await fetch('/api/registros/atletismo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      const res = await submitRecord('atletismo', '/api/registros/atletismo', body);
 
-      const data = await res.json();
-      if (data.success) {
-        setSuccessMsg(`¡Mejor marca registrada! (${formattedBest})`);
+      if (res.success) {
+        setSuccessMsg(res.message);
         setAttempt1('');
         setAttempt2('');
         setAttempt3('');
         if (onRecordSaved) onRecordSaved();
       } else {
-        setErrorMsg(data.error || 'Error al guardar la marca');
+        setErrorMsg(res.message || 'Error al guardar la marca');
       }
     } catch (err) {
       console.error(err);
@@ -115,21 +111,16 @@ export default function JumpsThrowsModule({
         puntos: 0,
       };
 
-      const res = await fetch('/api/registros/atletismo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      const res = await submitRecord('atletismo', '/api/registros/atletismo', body);
 
-      const data = await res.json();
-      if (data.success) {
-        setSuccessMsg(`¡Prueba registrada como "No Completada" para ${selectedStudent.Nombre_Completo}!`);
+      if (res.success) {
+        setSuccessMsg(res.message);
         setAttempt1('');
         setAttempt2('');
         setAttempt3('');
         if (onRecordSaved) onRecordSaved();
       } else {
-        setErrorMsg(data.error || 'Error al guardar la marca');
+        setErrorMsg(res.message || 'Error al guardar la marca');
       }
     } catch (err) {
       console.error(err);

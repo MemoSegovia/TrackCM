@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Award, Star, Send, CheckCircle } from 'lucide-react';
 import { AlumnoInscrito, UserSession } from '@/lib/types';
+import { submitRecord } from '@/lib/offlineManager';
 
 interface QualitativeModuleProps {
   selectedStudent: AlumnoInscrito | null;
@@ -43,18 +44,13 @@ export default function QualitativeModule({
         calificacion,
       };
 
-      const res = await fetch('/api/registros/cualitativo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      const res = await submitRecord('cualitativo', '/api/registros/cualitativo', body);
 
-      const data = await res.json();
-      if (data.success) {
-        setSuccessMsg(`Evaluación registrada: ${deporte} (${calificacion})`);
+      if (res.success) {
+        setSuccessMsg(res.message);
         if (onRecordSaved) onRecordSaved();
       } else {
-        setErrorMsg(data.error || 'Error al guardar evaluación cualitativa');
+        setErrorMsg(res.message || 'Error al guardar evaluación cualitativa');
       }
     } catch (err) {
       console.error(err);
