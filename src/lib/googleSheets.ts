@@ -1,7 +1,24 @@
 import { google } from 'googleapis';
 import { Usuario, AlumnoInscrito, RegistroAntropometrico, RegistroAtletismo, RegistroCualitativo } from './types';
 
-const MOCK_USUARIOS: Usuario[] = [];
+const MOCK_USUARIOS: Usuario[] = [
+  {
+    ID_Usuario: 'USR-006',
+    Nombre: 'Orlando Campos',
+    Correo: 'orlando.campos@colmexi.edu.mx',
+    Password: '123',
+    Rol: 'Maestro',
+    Nivel_Asignado: 'Primaria Menor',
+  },
+  {
+    ID_Usuario: 'USR-007',
+    Nombre: 'Diego Armando Ibarra Reyes',
+    Correo: 'diego.ibarra@colmexi.edu.mx',
+    Password: '123',
+    Rol: 'Maestro',
+    Nivel_Asignado: 'Primaria Menor, Primaria Mayor',
+  },
+];
 const MOCK_ALUMNOS: AlumnoInscrito[] = [];
 const MOCK_ANTROPOMETRICOS: RegistroAntropometrico[] = [];
 const MOCK_ATLETISMO: RegistroAtletismo[] = [];
