@@ -8,7 +8,7 @@ const MOCK_USUARIOS: Usuario[] = [
     Correo: 'orlando.campos@colmexi.edu.mx',
     Password: '123',
     Rol: 'Maestro',
-    Nivel_Asignado: 'Primaria Menor (1, 2)',
+    Nivel_Asignado: 'Primaria Menor',
   },
   {
     ID_Usuario: 'USR-007',
@@ -16,7 +16,7 @@ const MOCK_USUARIOS: Usuario[] = [
     Correo: 'diego.ibarra@colmexi.edu.mx',
     Password: '123',
     Rol: 'Maestro',
-    Nivel_Asignado: 'Primaria Menor (3), Primaria Mayor (4, 5, 6)',
+    Nivel_Asignado: 'Primaria Menor, Primaria Mayor',
   },
 ];
 const MOCK_ALUMNOS: AlumnoInscrito[] = [];

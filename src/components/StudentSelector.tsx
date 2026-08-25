@@ -122,8 +122,7 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
       const matchedLevels: string[] = [];
 
       rawAssignedList.forEach((assigned) => {
-        // Strip parenthesized grades if any: e.g. "Primaria Menor (1, 2)" -> "Primaria Menor"
-        const cleanAssigned = assigned.replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+        const cleanAssigned = assigned.trim().toLowerCase();
         const officialMatch =
           NIVELES_ESCOLARES_OFICIALES.find((n) => n.toLowerCase() === cleanAssigned) ||
           availableNiveles.find((n) => n.toLowerCase() === cleanAssigned) ||
@@ -147,61 +146,20 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
     }
   }, [selectedCiclo, alumnos, isRestrictedTeacher, rawAssignedList.join(',')]);
 
-  // Update grades available for chosen Ciclo + Nivel (with teacher-level grade restrictions)
+  // Update grades available for chosen Ciclo + Nivel
   useEffect(() => {
     const list = alumnos.filter(
       (a) => a.Ciclo_Escolar === selectedCiclo && a.Nivel.toLowerCase() === selectedNivel.toLowerCase()
     );
-    let availableGrados = Array.from(new Set(list.map((a) => a.Grado))).filter(Boolean);
-
-    if (availableGrados.length === 0) {
-      availableGrados = ['1', '2', '3', '4', '5', '6'];
-    }
-
-    if (isRestrictedTeacher) {
-      const nameLower = user?.nombre?.toLowerCase() || '';
-      const emailLower = userEmailLower;
-      const cleanNivel = selectedNivel.toLowerCase();
-
-      // Rule for Orlando Campos: 1° y 2° grado de Primaria
-      if (nameLower.includes('orlando') || emailLower.includes('orlando')) {
-        if (cleanNivel.includes('primaria menor')) {
-          availableGrados = availableGrados.filter((g) => ['1', '2'].includes(g));
-        }
-      }
-
-      // Rule for Diego Armando Ibarra Reyes: 3° de Primaria Menor y 4°, 5°, 6° de Primaria Mayor
-      if (nameLower.includes('diego') || emailLower.includes('diego')) {
-        if (cleanNivel.includes('primaria menor')) {
-          availableGrados = availableGrados.filter((g) => ['3'].includes(g));
-        } else if (cleanNivel.includes('primaria mayor')) {
-          availableGrados = availableGrados.filter((g) => ['4', '5', '6'].includes(g));
-        }
-      }
-
-      // Explicit grade restrictions defined in rawAssignedList, e.g. "Primaria Menor (1, 2)" or "Primaria Menor (3)"
-      rawAssignedList.forEach((assignedStr) => {
-        const match = assignedStr.match(/([^(]+)\s*\(([^)]+)\)/);
-        if (match) {
-          const lvlName = match[1].trim().toLowerCase();
-          if (cleanNivel.includes(lvlName) || lvlName.includes(cleanNivel)) {
-            const gradeNums = match[2].match(/\d+/g);
-            if (gradeNums && gradeNums.length > 0) {
-              availableGrados = availableGrados.filter((g) => gradeNums.includes(g));
-            }
-          }
-        }
-      });
-    }
-
-    setGrados(availableGrados);
+    const availableGrados = Array.from(new Set(list.map((a) => a.Grado))).filter(Boolean);
+    setGrados(availableGrados.length > 0 ? availableGrados : ['1', '2', '3', '4', '5', '6']);
 
     if (availableGrados.length > 0 && (!selectedGrado || !availableGrados.includes(selectedGrado))) {
       setSelectedGrado(availableGrados[0]);
     } else if (availableGrados.length === 0) {
       setSelectedGrado('1');
     }
-  }, [selectedCiclo, selectedNivel, alumnos, isRestrictedTeacher, user?.nombre, userEmailLower, rawAssignedList.join(',')]);
+  }, [selectedCiclo, selectedNivel, alumnos]);
 
   // Update groups available for chosen Ciclo + Nivel + Grado
   useEffect(() => {

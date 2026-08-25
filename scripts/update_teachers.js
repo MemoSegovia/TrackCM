@@ -38,14 +38,31 @@ async function updateSheet() {
   const sheets = google.sheets({ version: 'v4', auth });
 
   try {
-    // Update Row 6 (Orlando Campos) -> Primaria Menor (1, 2)
+    // Restore row 32 (DIEGO ALONSO RAMIREZ GARZA)
+    const row32Data = [
+      "",
+      "DIEGO ALONSO RAMIREZ GARZA",
+      "diego.ramirez@colmexi.edu.mx",
+      "123456789",
+      "alumno",
+      "Kinder"
+    ];
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: 'Usuarios!A32:F32',
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: [row32Data] },
+    });
+    console.log('Restored Row 32 (DIEGO ALONSO RAMIREZ GARZA).');
+
+    // Update Row 6 (Orlando Campos) -> Primaria Menor (1° y 2° de Primaria)
     const row6Data = [
       "USR-006",
       "Orlando Campos",
       "orlando.campos@colmexi.edu.mx",
       "123456789",
       "maestro",
-      "Primaria Menor (1, 2)"
+      "Primaria Menor"
     ];
     await sheets.spreadsheets.values.update({
       spreadsheetId,
@@ -53,16 +70,16 @@ async function updateSheet() {
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [row6Data] },
     });
-    console.log('Updated Row 6 (Orlando Campos) to Primaria Menor (1, 2).');
+    console.log('Updated Row 6 (Orlando Campos) to Primaria Menor.');
 
-    // Update Row 7 (Diego Armando Ibarra Reyes) -> Primaria Menor (3), Primaria Mayor (4, 5, 6)
+    // Update Row 7 (Diego Armando Ibarra Reyes) -> Primaria Menor, Primaria Mayor (3°, 4°, 5°, 6° de Primaria)
     const row7Data = [
       "USR-007",
       "Diego Armando Ibarra Reyes",
       "diego.ibarra@colmexi.edu.mx",
       "123456789",
       "maestro",
-      "Primaria Menor (3), Primaria Mayor (4, 5, 6)"
+      "Primaria Menor, Primaria Mayor"
     ];
     await sheets.spreadsheets.values.update({
       spreadsheetId,
@@ -70,7 +87,7 @@ async function updateSheet() {
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [row7Data] },
     });
-    console.log('Updated Row 7 (Diego Armando Ibarra Reyes) to Primaria Menor (3), Primaria Mayor (4, 5, 6).');
+    console.log('Updated Row 7 (Diego Armando Ibarra Reyes) to Primaria Menor, Primaria Mayor.');
 
     // Fetch and display updated rows 1 to 10
     const res = await sheets.spreadsheets.values.get({
