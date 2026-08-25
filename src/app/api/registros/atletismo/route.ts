@@ -56,7 +56,9 @@ export async function POST(request: Request) {
 
     // Auto-consolidate and sync group best results to Google Sheets
     if (stObj) {
-      const studentGrupo = (stObj.Grupo || '').trim() || (stObj.Grado ? `${stObj.Grado}${stObj.Grupo}` : '');
+      const cleanGrado = (stObj.Grado || '').replace(/[^0-9]/g, '');
+      const cleanGrupo = (stObj.Grupo || '').replace(/[^A-Z]/g, '');
+      const studentGrupo = cleanGrado && cleanGrupo ? `${cleanGrado}${cleanGrupo}` : (stObj.Grupo || '').trim();
       if (studentGrupo) {
         try {
           const [allAtl, allCual] = await Promise.all([

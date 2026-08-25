@@ -410,20 +410,26 @@ export async function updateGrupoMejoresResultadosSheet(
     const tabName = grupo.trim();
 
     try {
-      await sheets.spreadsheets.batchUpdate({
+      const meta = await sheets.spreadsheets.get({
         spreadsheetId: mejoesSpreadsheetId,
-        requestBody: {
-          requests: [
-            {
-              addSheet: {
-                properties: { title: tabName },
-              },
-            },
-          ],
-        },
       });
+      const existingTitles = (meta.data.sheets || []).map((s) => s.properties?.title || '');
+      if (!existingTitles.includes(tabName)) {
+        await sheets.spreadsheets.batchUpdate({
+          spreadsheetId: mejoesSpreadsheetId,
+          requestBody: {
+            requests: [
+              {
+                addSheet: {
+                  properties: { title: tabName },
+                },
+              },
+            ],
+          },
+        });
+      }
     } catch (e) {
-      // Tab may already exist
+      console.warn(`Warning checking/creating sheet tab ${tabName}:`, e);
     }
 
     await sheets.spreadsheets.values.update({

@@ -14,18 +14,21 @@ export const PESTANIAS_GRUPOS_OFICIALES = [
 
 export function isStudentInGrupo(a: AlumnoInscrito, targetGrupo: string): boolean {
   const target = (targetGrupo || '').trim().toUpperCase();
-  const rawGrupo = (a.Grupo || '').trim().toUpperCase();
-  const rawGrado = (a.Grado || '').trim().toUpperCase();
-  const rawNivel = (a.Nivel || '').trim().toUpperCase();
+  const cleanTargetGrado = target.replace(/[^0-9]/g, '');
+  const cleanTargetGrupo = target.replace(/[^A-Z]/g, '');
 
-  // Direct match (e.g. Grupo === "1A")
-  if (rawGrupo === target) return true;
+  const rawGradoClean = (a.Grado || '').replace(/[^0-9]/g, '');
+  const rawGrupoClean = (a.Grupo || '').replace(/[^A-Z]/g, '');
 
-  // Grado + Grupo combination (e.g. Grado "1" + Grupo "A" => "1A")
-  const combo = `${rawGrado}${rawGrupo}`.replace(/[^A-Z0-9]/g, '');
-  if (combo === target) return true;
+  if (cleanTargetGrado && cleanTargetGrupo && rawGradoClean && rawGrupoClean) {
+    return rawGradoClean === cleanTargetGrado && rawGrupoClean === cleanTargetGrupo;
+  }
 
-  return false;
+  const directGrupoClean = (a.Grupo || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (directGrupoClean === target) return true;
+
+  const combo = `${rawGradoClean}${rawGrupoClean}`;
+  return combo === target;
 }
 
 export function getNivelByGrupo(grupoName: string): string {
@@ -57,13 +60,29 @@ export interface StudentBestMarksRow {
   abc: string;
 }
 
+function matchesStudent(record: { ID_Alumno?: string; Nombre_Alumno?: string }, student: AlumnoInscrito): boolean {
+  if (!record) return false;
+  const recName = (record.Nombre_Alumno || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  const stName = (student.Nombre_Completo || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+  if (recName && stName && recName === stName) {
+    return true;
+  }
+
+  if (record.ID_Alumno && student.ID_Alumno && record.ID_Alumno === student.ID_Alumno) {
+    if (!recName || recName === stName) return true;
+  }
+
+  return false;
+}
+
 export function calculateBestMarksForStudent(
   student: AlumnoInscrito,
   atletismoRecords: RegistroAtletismo[],
   cualitativoRecords: RegistroCualitativo[]
 ): StudentBestMarksRow {
-  const studentAtl = atletismoRecords.filter((r) => r.ID_Alumno === student.ID_Alumno);
-  const studentCual = cualitativoRecords.filter((r) => r.ID_Alumno === student.ID_Alumno);
+  const studentAtl = atletismoRecords.filter((r) => matchesStudent(r, student));
+  const studentCual = cualitativoRecords.filter((r) => matchesStudent(r, student));
 
   // 1. Velocidad (50m, 75m, 100m, 200m, 400m, Velocidad)
   const velRecs = studentAtl.filter(

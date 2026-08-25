@@ -111,6 +111,37 @@ export default function BestResultsTable({ user, cicloEscolar = '2026-2027' }: B
     }
   };
 
+  const handleSyncAllToSheets = async () => {
+    try {
+      setSyncing(true);
+      setMsg(null);
+      const res = await fetch('/api/mejores-resultados', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          syncAll: true,
+          cicloEscolar,
+          nombreMaestro: user?.nombre || 'Prof. Educación Física',
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setMsg({
+          type: 'success',
+          text: data.message || '¡Se crearon y actualizaron exitosamente todas las pestañas de grupo en Google Sheets!',
+        });
+      } else {
+        setMsg({ type: 'error', text: data.error || 'Error al sincronizar las pestañas en Google Sheets' });
+      }
+    } catch (err) {
+      console.error(err);
+      setMsg({ type: 'error', text: 'Error de red al conectar con Google Sheets' });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const exportToPdf = async () => {
     await exportElementToPdf(
       'printable-mejores-resultados',
@@ -128,7 +159,7 @@ export default function BestResultsTable({ user, cicloEscolar = '2026-2027' }: B
   return (
     <div id="printable-mejores-resultados" className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
             <Table className="w-6 h-6" />
@@ -141,14 +172,25 @@ export default function BestResultsTable({ user, cicloEscolar = '2026-2027' }: B
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
           <button
             onClick={handleSyncToSheets}
             disabled={syncing}
-            className="flex-1 sm:flex-none py-3 px-5 rounded-2xl font-black text-xs bg-emerald-500 hover:bg-emerald-600 text-slate-950 transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95 disabled:opacity-40"
+            className="flex-1 sm:flex-none py-3 px-4 rounded-2xl font-black text-xs bg-emerald-500 hover:bg-emerald-600 text-slate-950 transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95 disabled:opacity-40"
+            title="Sincronizar pestaña seleccionada a Google Sheets"
           >
             <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-            {syncing ? 'Sincronizando...' : 'Sincronizar a Google Sheets'}
+            {syncing ? 'Sincronizando...' : `Sincronizar ${selectedGrupo}`}
+          </button>
+
+          <button
+            onClick={handleSyncAllToSheets}
+            disabled={syncing}
+            className="flex-1 sm:flex-none py-3 px-4 rounded-2xl font-black text-xs bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95 disabled:opacity-40"
+            title="Crear y actualizar todas las pestañas de grupos con alumnos en Google Sheets"
+          >
+            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Sincronizando...' : 'Sincronizar Todos los Grupos'}
           </button>
 
           <button

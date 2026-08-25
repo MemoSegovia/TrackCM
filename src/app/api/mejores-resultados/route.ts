@@ -56,17 +56,47 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { grupo, cicloEscolar = '2026-2027', nombreMaestro = 'Prof. Educación Física' } = body;
-
-    if (!grupo) {
-      return NextResponse.json({ success: false, error: 'Se requiere el parámetro grupo' }, { status: 400 });
-    }
+    const { grupo, syncAll, cicloEscolar = '2026-2027', nombreMaestro = 'Prof. Educación Física' } = body;
 
     const [alumnos, atletismo, cualitativo] = await Promise.all([
       getAlumnosInscritos(),
       getRegistrosAtletismo(),
       getRegistrosCualitativos(),
     ]);
+
+    if (syncAll) {
+      // Find all groups that have enrolled students
+      const groupsWithStudents = PESTANIAS_GRUPOS_OFICIALES.filter((grp) =>
+        alumnos.some((a) => isStudentInGrupo(a, grp))
+      );
+
+      let syncedCount = 0;
+      for (const grp of groupsWithStudents) {
+        const groupStudents = alumnos.filter((a) => isStudentInGrupo(a, grp));
+        const rowsData = groupStudents.map((st) =>
+          calculateBestMarksForStudent(st, atletismo, cualitativo)
+        );
+        const ok = await updateGrupoMejoresResultadosSheet(
+          grp,
+          cicloEscolar,
+          nombreMaestro,
+          rowsData
+        );
+        if (ok) syncedCount++;
+      }
+
+      return NextResponse.json({
+        success: true,
+        synced: true,
+        gruposSincronizados: syncedCount,
+        totalGrupos: groupsWithStudents.length,
+        message: `¡Se crearon y actualizaron exitosamente ${syncedCount} pestañas de grupo en Google Sheets!`,
+      });
+    }
+
+    if (!grupo) {
+      return NextResponse.json({ success: false, error: 'Se requiere el parámetro grupo' }, { status: 400 });
+    }
 
     const groupStudents = alumnos.filter((a) => isStudentInGrupo(a, grupo));
 
