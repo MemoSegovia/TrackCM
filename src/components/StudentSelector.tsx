@@ -42,7 +42,7 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
   const rawAssignedList: string[] = [];
   if (sessionAssigned) {
     sessionAssigned.split(/[,/;]+/).forEach((s) => {
-      const clean = s.trim();
+      const clean = s.replace(/\s*\([^)]*\)/g, '').trim();
       if (clean && !rawAssignedList.some((r) => r.toLowerCase() === clean.toLowerCase())) {
         rawAssignedList.push(clean);
       }
@@ -50,8 +50,9 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
   }
 
   mappedAssigned.forEach((lvl) => {
-    if (!rawAssignedList.some((r) => r.toLowerCase() === lvl.toLowerCase())) {
-      rawAssignedList.push(lvl);
+    const clean = lvl.replace(/\s*\([^)]*\)/g, '').trim();
+    if (clean && !rawAssignedList.some((r) => r.toLowerCase() === clean.toLowerCase())) {
+      rawAssignedList.push(clean);
     }
   });
 
@@ -122,21 +123,23 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
       const matchedLevels: string[] = [];
 
       rawAssignedList.forEach((assigned) => {
-        const cleanAssigned = assigned.trim().toLowerCase();
+        const cleanAssigned = assigned.replace(/\s*\([^)]*\)/g, '').trim().toLowerCase();
+        if (!cleanAssigned) return;
+
         const officialMatch =
           NIVELES_ESCOLARES_OFICIALES.find((n) => n.toLowerCase() === cleanAssigned) ||
-          availableNiveles.find((n) => n.toLowerCase() === cleanAssigned) ||
-          assigned;
+          availableNiveles.find((n) => n.toLowerCase() === cleanAssigned);
 
-        if (!matchedLevels.some((m) => m.toLowerCase() === officialMatch.toLowerCase())) {
+        if (officialMatch && !matchedLevels.some((m) => m.toLowerCase() === officialMatch.toLowerCase())) {
           matchedLevels.push(officialMatch);
         }
       });
 
-      setNiveles(matchedLevels);
+      const finalNiveles = matchedLevels.length > 0 ? matchedLevels : availableNiveles;
+      setNiveles(finalNiveles);
 
-      if (matchedLevels.length > 0 && (!selectedNivel || !matchedLevels.some((m) => m.toLowerCase() === selectedNivel.toLowerCase()))) {
-        setSelectedNivel(matchedLevels[0]);
+      if (finalNiveles.length > 0 && (!selectedNivel || !finalNiveles.some((m) => m.toLowerCase() === selectedNivel.toLowerCase()))) {
+        setSelectedNivel(finalNiveles[0]);
       }
     } else {
       setNiveles(availableNiveles);
