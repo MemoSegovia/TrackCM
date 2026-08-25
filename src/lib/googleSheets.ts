@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 import { Usuario, AlumnoInscrito, RegistroAntropometrico, RegistroAtletismo, RegistroCualitativo } from './types';
+import { getNivelByGrupo } from './mejoresResultados';
 
 const MOCK_USUARIOS: Usuario[] = [
   {
@@ -351,6 +352,32 @@ function getSpreadsheetIdForCiclo(cicloEscolar?: string): string | undefined {
   return process.env.SPREADSHEET_ID_MEJORES_RESULTADOS || process.env.SPREADSHEET_ID;
 }
 
+export async function getTeacherNameForLevel(nivel: string): Promise<string> {
+  const usuarios = await getUsuarios();
+  const maestros = usuarios.filter(
+    (u) => u.Rol?.toLowerCase() === 'maestro' || u.Rol?.toLowerCase() === 'profesor'
+  );
+
+  const cleanNivel = (nivel || '').toLowerCase().trim();
+
+  const found = maestros.find((m) => {
+    const assigned = (m.Nivel_Asignado || '').toLowerCase();
+    return assigned.includes(cleanNivel);
+  });
+
+  if (found && found.Nombre) {
+    return found.Nombre;
+  }
+
+  if (cleanNivel.includes('kinder')) return 'Jaqueline Michelle Hinojosa castro';
+  if (cleanNivel.includes('primaria menor')) return 'Orlando Campos';
+  if (cleanNivel.includes('primaria mayor')) return 'Diego Armando Ibarra Reyes';
+  if (cleanNivel.includes('secundaria') || cleanNivel.includes('preparatoria'))
+    return 'Eduardo Yazebet Armenta Gonzáles';
+
+  return 'Profesor de Educación Física';
+}
+
 export async function updateGrupoMejoresResultadosSheet(
   grupo: string,
   cicloEscolar: string,
@@ -377,17 +404,13 @@ export async function updateGrupoMejoresResultadosSheet(
 
     const sheets = google.sheets({ version: 'v4', auth });
     
-    // Determine level from group name
-    let nivel = 'General';
-    const g = (grupo || '').trim().toUpperCase();
-    if (['K1', 'K2', 'K3'].includes(g)) nivel = 'Kinder';
-    else if (['1A', '1B', '1C', '2A', '2B', '2C', '3A', '3B', '3C'].includes(g)) nivel = 'Primaria Menor';
-    else if (['4A', '4B', '4C', '5A', '5B', '5C', '6A', '6B', '6C'].includes(g)) nivel = 'Primaria Mayor';
-    else if (['7A', '7B', '7C', '8A', '8B', '8C', '9A', '9B', '9C'].includes(g)) nivel = 'Secundaria';
-    else if (['10A', '10B', '10C', '10D', '10E', '11A', '11B', '12A', '12B', '12C', '12D'].includes(g)) nivel = 'Preparatoria';
+    // Determine level from group name and resolve assigned teacher name
+    const nivel = getNivelByGrupo(grupo);
+    const maestroAsignado = await getTeacherNameForLevel(nivel);
+    const maestroNombreFinal = maestroAsignado || maestroNombre || 'Profesor de Educación Física';
 
     const headerBlock = [
-      [`Profesor: ${maestroNombre}`, '', `Ciclo Escolar: ${cicloEscolar}`, ''],
+      [`Profesor: ${maestroNombreFinal}`, '', `Ciclo Escolar: ${cicloEscolar}`, ''],
       [`Materia: Educación Física`, '', `Nivel Escolar: ${nivel}`, `Grupo: ${grupo}`],
       [],
       ['ID_Alumno', 'Nombre del alumno', 'M / F', 'Velocidad', 'Salto', 'Lanzamiento', 'Resistencia', 'Cuerda', 'Orden y Control', 'ABC'],

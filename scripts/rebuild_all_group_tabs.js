@@ -19,6 +19,7 @@ function getSanitizedPrivateKey(key) {
 }
 
 const PESTANIAS_GRUPOS_OFICIALES = [
+  'K3A', 'K3B', 'K3C', 'K3D',
   '1A', '1B', '1C', '2A', '2B', '2C', '3A', '3B', '3C',
   '4A', '4B', '4C', '5A', '5B', '5C', '6A', '6B', '6C',
   '7A', '7B', '7C', '8A', '8B', '8C', '9A', '9B', '9C',
@@ -27,11 +28,25 @@ const PESTANIAS_GRUPOS_OFICIALES = [
 
 function isStudentInGrupo(a, targetGrupo) {
   const target = (targetGrupo || '').trim().toUpperCase();
-  const cleanTargetGrado = target.replace(/[^0-9]/g, '');
-  const cleanTargetGrupo = target.replace(/[^A-Z]/g, '');
-
+  const rawNivel = (a.Nivel || '').trim().toLowerCase();
   const rawGradoClean = (a.Grado || '').replace(/[^0-9]/g, '');
   const rawGrupoClean = (a.Grupo || '').replace(/[^A-Z]/g, '');
+
+  if (target.startsWith('K')) {
+    const targetGrupoLetter = target.replace(/[^A-Z]/g, '').replace(/^K/, '');
+    const targetGradoNum = target.replace(/[^0-9]/g, '');
+    if (rawNivel.includes('kinder')) {
+      if (targetGradoNum && rawGradoClean && targetGradoNum !== rawGradoClean) return false;
+      if (targetGrupoLetter && rawGrupoClean && targetGrupoLetter !== rawGrupoClean) return false;
+      return true;
+    }
+    return false;
+  }
+
+  if (rawNivel.includes('kinder')) return false;
+
+  const cleanTargetGrado = target.replace(/[^0-9]/g, '');
+  const cleanTargetGrupo = target.replace(/[^A-Z]/g, '');
 
   if (cleanTargetGrado && cleanTargetGrupo && rawGradoClean && rawGrupoClean) {
     return rawGradoClean === cleanTargetGrado && rawGrupoClean === cleanTargetGrupo;
@@ -42,6 +57,25 @@ function isStudentInGrupo(a, targetGrupo) {
 
   const combo = `${rawGradoClean}${rawGrupoClean}`;
   return combo === target;
+}
+
+function getNivelByGrupo(grupoName) {
+  const g = (grupoName || '').trim().toUpperCase();
+  if (['K3A', 'K3B', 'K3C', 'K3D', 'K1', 'K2', 'K3'].includes(g) || g.startsWith('K')) return 'Kinder';
+  if (['1A', '1B', '1C', '2A', '2B', '2C', '3A', '3B', '3C'].includes(g)) return 'Primaria Menor';
+  if (['4A', '4B', '4C', '5A', '5B', '5C', '6A', '6B', '6C'].includes(g)) return 'Primaria Mayor';
+  if (['7A', '7B', '7C', '8A', '8B', '8C', '9A', '9B', '9C'].includes(g)) return 'Secundaria';
+  if (['10A', '10B', '10C', '10D', '10E', '11A', '11B', '12A', '12B', '12C', '12D'].includes(g)) return 'Preparatoria';
+  return 'General';
+}
+
+function getTeacherNameForLevel(nivel) {
+  const clean = (nivel || '').toLowerCase().trim();
+  if (clean.includes('kinder')) return 'Jaqueline Michelle Hinojosa castro';
+  if (clean.includes('primaria menor')) return 'Orlando Campos';
+  if (clean.includes('primaria mayor')) return 'Diego Armando Ibarra Reyes';
+  if (clean.includes('secundaria') || clean.includes('preparatoria')) return 'Eduardo Yazebet Armenta Gonzáles';
+  return 'Profesor de Educación Física';
 }
 
 function parseSecondsFromFormattedTime(formattedStr) {
@@ -225,7 +259,6 @@ async function rebuild() {
   const sheets = google.sheets({ version: 'v4', auth });
 
   try {
-    // 1. Fetch Alumnos_Inscritos, Registros_Atletismo, Registros_Cualitativos
     const [resAlu, resAtl, resCual] = await Promise.all([
       sheets.spreadsheets.values.get({ spreadsheetId, range: 'Alumnos_Inscritos!A2:H' }),
       sheets.spreadsheets.values.get({ spreadsheetId, range: 'Registros_Atletismo!A2:Z' }),
@@ -275,26 +308,20 @@ async function rebuild() {
 
     console.log(`Loaded ${alumnos.length} students, ${atletismo.length} atletismo, ${cualitativo.length} cualitativo records.`);
 
-    // 2. Find groups that have enrolled students
     const groupsWithStudents = PESTANIAS_GRUPOS_OFICIALES.filter((grp) =>
       alumnos.some((a) => isStudentInGrupo(a, grp))
     );
 
     console.log('Groups with enrolled students:', groupsWithStudents);
 
-    const maestroNombre = 'Eduardo Yazebet Armenta Gonzáles';
     const cicloEscolar = '2026-2027';
 
     for (const grp of groupsWithStudents) {
       const grpStudents = alumnos.filter((a) => isStudentInGrupo(a, grp));
-
       const rowsData = grpStudents.map((st) => calculateBestMarksForStudent(st, atletismo, cualitativo));
 
-      let nivel = 'General';
-      if (['1A', '1B', '1C', '2A', '2B', '2C', '3A', '3B', '3C'].includes(grp)) nivel = 'Primaria Menor';
-      else if (['4A', '4B', '4C', '5A', '5B', '5C', '6A', '6B', '6C'].includes(grp)) nivel = 'Primaria Mayor';
-      else if (['7A', '7B', '7C', '8A', '8B', '8C', '9A', '9B', '9C'].includes(grp)) nivel = 'Secundaria';
-      else if (['10A', '10B', '10C', '10D', '10E', '11A', '11B', '12A', '12B', '12C', '12D'].includes(grp)) nivel = 'Preparatoria';
+      const nivel = getNivelByGrupo(grp);
+      const maestroNombre = getTeacherNameForLevel(nivel);
 
       const headerBlock = [
         [`Profesor: ${maestroNombre}`, '', `Ciclo Escolar: ${cicloEscolar}`, ''],
@@ -338,23 +365,10 @@ async function rebuild() {
         requestBody: { values: allValues },
       });
 
-      console.log(`Updated tab "${grp}" successfully!`);
+      console.log(`Updated tab "${grp}" (${grpStudents.length} students) with teacher "${maestroNombre}"!`);
     }
 
-    // 3. Now delete tab "A" if present
-    const meta = await sheets.spreadsheets.get({ spreadsheetId: mejoesSpreadsheetId });
-    const tabA = (meta.data.sheets || []).find((s) => s.properties.title === 'A');
-    if (tabA && meta.data.sheets.length > 1) {
-      await sheets.spreadsheets.batchUpdate({
-        spreadsheetId: mejoesSpreadsheetId,
-        requestBody: {
-          requests: [{ deleteSheet: { sheetId: tabA.properties.sheetId } }],
-        },
-      });
-      console.log('Deleted malformed tab "A" successfully!');
-    }
-
-    console.log('REBUILD COMPLETE!');
+    console.log('REBUILD COMPLETE WITH TEACHER NAMES PER LEVEL!');
 
   } catch (err) {
     console.error('Error rebuilding group tabs:', err);

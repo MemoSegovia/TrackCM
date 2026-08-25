@@ -2,6 +2,8 @@ import { AlumnoInscrito, RegistroAtletismo, RegistroCualitativo } from './types'
 import { parseSecondsFromFormattedTime, parseDistanceInMeters } from './utils';
 
 export const PESTANIAS_GRUPOS_OFICIALES = [
+  // Kinder
+  'K3A', 'K3B', 'K3C', 'K3D',
   // Primaria Menor
   '1A', '1B', '1C', '2A', '2B', '2C', '3A', '3B', '3C',
   // Primaria Mayor
@@ -14,11 +16,27 @@ export const PESTANIAS_GRUPOS_OFICIALES = [
 
 export function isStudentInGrupo(a: AlumnoInscrito, targetGrupo: string): boolean {
   const target = (targetGrupo || '').trim().toUpperCase();
-  const cleanTargetGrado = target.replace(/[^0-9]/g, '');
-  const cleanTargetGrupo = target.replace(/[^A-Z]/g, '');
-
+  const rawNivel = (a.Nivel || '').trim().toLowerCase();
   const rawGradoClean = (a.Grado || '').replace(/[^0-9]/g, '');
   const rawGrupoClean = (a.Grupo || '').replace(/[^A-Z]/g, '');
+
+  // Kinder 3rd grade tabs (e.g. K3A, K3B, K3C, K3D)
+  if (target.startsWith('K')) {
+    const targetGrupoLetter = target.replace(/[^A-Z]/g, '').replace(/^K/, ''); // "A", "B", etc.
+    const targetGradoNum = target.replace(/[^0-9]/g, ''); // "3"
+    if (rawNivel.includes('kinder')) {
+      if (targetGradoNum && rawGradoClean && targetGradoNum !== rawGradoClean) return false;
+      if (targetGrupoLetter && rawGrupoClean && targetGrupoLetter !== rawGrupoClean) return false;
+      return true;
+    }
+    return false;
+  }
+
+  // Non-Kinder groups
+  if (rawNivel.includes('kinder')) return false;
+
+  const cleanTargetGrado = target.replace(/[^0-9]/g, '');
+  const cleanTargetGrupo = target.replace(/[^A-Z]/g, '');
 
   if (cleanTargetGrado && cleanTargetGrupo && rawGradoClean && rawGrupoClean) {
     return rawGradoClean === cleanTargetGrado && rawGrupoClean === cleanTargetGrupo;
@@ -33,6 +51,7 @@ export function isStudentInGrupo(a: AlumnoInscrito, targetGrupo: string): boolea
 
 export function getNivelByGrupo(grupoName: string): string {
   const g = (grupoName || '').trim().toUpperCase();
+  if (['K3A', 'K3B', 'K3C', 'K3D', 'K1', 'K2', 'K3'].includes(g) || g.startsWith('K')) return 'Kinder';
   if (['1A', '1B', '1C', '2A', '2B', '2C', '3A', '3B', '3C'].includes(g)) return 'Primaria Menor';
   if (['4A', '4B', '4C', '5A', '5B', '5C', '6A', '6B', '6C'].includes(g)) return 'Primaria Mayor';
   if (['7A', '7B', '7C', '8A', '8B', '8C', '9A', '9B', '9C'].includes(g)) return 'Secundaria';
