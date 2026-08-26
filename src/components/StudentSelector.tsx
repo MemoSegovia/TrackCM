@@ -64,6 +64,24 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
 
   const isRestrictedTeacher = userRoleLower === 'maestro' && !isUnlimitedTeacher;
 
+  const isDiegoArmando =
+    (user?.nombre?.toLowerCase().includes('diego armando') ||
+     user?.correo?.toLowerCase().includes('diego.ibarra')) ?? false;
+
+  const isGroupDisabledForUser = (grado: string, grupo: string): boolean => {
+    if (!isDiegoArmando) return false;
+    const cleanGrado = (grado || '').replace(/[^0-9]/g, '');
+    const cleanGrupo = (grupo || '').trim().toUpperCase();
+
+    if (cleanGrado === '1' && ['A', 'B', 'C', 'D'].includes(cleanGrupo)) {
+      return true;
+    }
+    if (cleanGrado === '2' && ['A', 'B', 'C'].includes(cleanGrupo)) {
+      return true;
+    }
+    return false;
+  };
+
   const [isOfflineData, setIsOfflineData] = useState<boolean>(false);
 
   useEffect(() => {
@@ -155,14 +173,28 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
       (a) => a.Ciclo_Escolar === selectedCiclo && a.Nivel.toLowerCase() === selectedNivel.toLowerCase()
     );
     const availableGrados = Array.from(new Set(list.map((a) => a.Grado))).filter(Boolean);
-    setGrados(availableGrados.length > 0 ? availableGrados : ['1', '2', '3', '4', '5', '6']);
+    const sortedGrados = availableGrados.length > 0 ? availableGrados : ['1', '2', '3', '4', '5', '6'];
+    setGrados(sortedGrados);
 
-    if (availableGrados.length > 0 && (!selectedGrado || !availableGrados.includes(selectedGrado))) {
-      setSelectedGrado(availableGrados[0]);
-    } else if (availableGrados.length === 0) {
+    if (isDiegoArmando && selectedNivel.toLowerCase().includes('primaria')) {
+      const validGrade = sortedGrados.find((g) => {
+        const cleanG = g.replace(/[^0-9]/g, '');
+        return cleanG !== '1' && cleanG !== '2';
+      }) || sortedGrados[0];
+
+      const currentCleanG = (selectedGrado || '').replace(/[^0-9]/g, '');
+      if (!selectedGrado || currentCleanG === '1' || currentCleanG === '2') {
+        setSelectedGrado(validGrade);
+        return;
+      }
+    }
+
+    if (sortedGrados.length > 0 && (!selectedGrado || !sortedGrados.includes(selectedGrado))) {
+      setSelectedGrado(sortedGrados[0]);
+    } else if (sortedGrados.length === 0) {
       setSelectedGrado('1');
     }
-  }, [selectedCiclo, selectedNivel, alumnos]);
+  }, [selectedCiclo, selectedNivel, alumnos, isDiegoArmando]);
 
   // Update groups available for chosen Ciclo + Nivel + Grado
   useEffect(() => {
@@ -173,14 +205,19 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
         a.Grado === selectedGrado
     );
     const availableGrupos = Array.from(new Set(list.map((a) => a.Grupo))).filter(Boolean);
-    setGrupos(availableGrupos.length > 0 ? availableGrupos : ['A', 'B', 'C']);
+    const sortedGrupos = availableGrupos.length > 0 ? availableGrupos : ['A', 'B', 'C'];
+    setGrupos(sortedGrupos);
 
-    if (availableGrupos.length > 0 && (!selectedGrupo || !availableGrupos.includes(selectedGrupo))) {
-      setSelectedGrupo(availableGrupos[0]);
-    } else if (availableGrupos.length === 0) {
+    const validGroup = sortedGrupos.find((grp) => !isGroupDisabledForUser(selectedGrado, grp));
+
+    if (validGroup && (!selectedGrupo || !sortedGrupos.includes(selectedGrupo) || isGroupDisabledForUser(selectedGrado, selectedGrupo))) {
+      setSelectedGrupo(validGroup);
+    } else if (!validGroup && sortedGrupos.length > 0) {
+      setSelectedGrupo(sortedGrupos[0]);
+    } else if (sortedGrupos.length === 0) {
       setSelectedGrupo('A');
     }
-  }, [selectedCiclo, selectedNivel, selectedGrado, alumnos]);
+  }, [selectedCiclo, selectedNivel, selectedGrado, alumnos, isDiegoArmando]);
 
   // Update filtered final list of students
   useEffect(() => {
@@ -189,7 +226,8 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
         a.Ciclo_Escolar === selectedCiclo &&
         a.Nivel.toLowerCase() === selectedNivel.toLowerCase() &&
         a.Grado === selectedGrado &&
-        a.Grupo === selectedGrupo
+        a.Grupo === selectedGrupo &&
+        !isGroupDisabledForUser(a.Grado, a.Grupo)
     );
     setFilteredAlumnos(list);
 
@@ -203,7 +241,7 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
       setSelectedAlumnoId('');
       onSelectStudent(null, selectedCiclo, list);
     }
-  }, [selectedCiclo, selectedNivel, selectedGrado, selectedGrupo, alumnos]);
+  }, [selectedCiclo, selectedNivel, selectedGrado, selectedGrupo, alumnos, isDiegoArmando]);
 
   const handleStudentChange = (id: string) => {
     setSelectedAlumnoId(id);
@@ -287,11 +325,20 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
             onChange={(e) => setSelectedGrado(e.target.value)}
             className="w-full bg-slate-800/80 text-slate-100 text-sm rounded-xl px-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 transition-colors"
           >
-            {grados.map((g) => (
-              <option key={g} value={g}>
-                Grado {g}°
-              </option>
-            ))}
+            {grados.map((g) => {
+              const cleanG = g.replace(/[^0-9]/g, '');
+              const isGradeDisabled = isDiegoArmando && selectedNivel.toLowerCase().includes('primaria') && (cleanG === '1' || cleanG === '2');
+              return (
+                <option
+                  key={g}
+                  value={g}
+                  disabled={isGradeDisabled}
+                  className={isGradeDisabled ? 'bg-slate-900 text-slate-600 font-normal' : 'bg-slate-900 text-white'}
+                >
+                  Grado {g}° {isGradeDisabled ? '(Inhabilitado)' : ''}
+                </option>
+              );
+            })}
           </select>
         </div>
 
@@ -305,11 +352,19 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
             onChange={(e) => setSelectedGrupo(e.target.value)}
             className="w-full bg-slate-800/80 text-slate-100 text-sm rounded-xl px-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 transition-colors"
           >
-            {grupos.map((grp) => (
-              <option key={grp} value={grp}>
-                Grupo "{grp}"
-              </option>
-            ))}
+            {grupos.map((grp) => {
+              const isDisabled = isGroupDisabledForUser(selectedGrado, grp);
+              return (
+                <option
+                  key={grp}
+                  value={grp}
+                  disabled={isDisabled}
+                  className={isDisabled ? 'bg-slate-900 text-slate-600 font-normal' : 'bg-slate-900 text-white'}
+                >
+                  Grupo "{grp}" {isDisabled ? '(Inhabilitado)' : ''}
+                </option>
+              );
+            })}
           </select>
         </div>
       </div>
