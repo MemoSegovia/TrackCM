@@ -1,5 +1,13 @@
 import { NextResponse } from 'next/server';
-import { addRegistroCualitativo, getAlumnosInscritos, getUsuarios } from '@/lib/googleSheets';
+import {
+  addRegistroCualitativo,
+  getAlumnosInscritos,
+  getRegistrosAtletismo,
+  getRegistrosCualitativos,
+  getUsuarios,
+  updateGrupoMejoresResultadosSheet,
+} from '@/lib/googleSheets';
+import { calculateBestMarksForStudent, isStudentInGrupo } from '@/lib/mejoresResultados';
 import { generateRecordId, getCurrentDateISO } from '@/lib/utils';
 import { RegistroCualitativo } from '@/lib/types';
 
@@ -20,7 +28,11 @@ export async function POST(request: Request) {
       getUsuarios(),
     ]);
 
-    const stObj = alumnos.find((a) => a.ID_Alumno === idAlumno);
+    const cleanNombre = (nombreAlumno || '').trim().toLowerCase();
+    const stObj =
+      (cleanNombre
+        ? alumnos.find((a) => a.Nombre_Completo.trim().toLowerCase() === cleanNombre)
+        : null) || alumnos.find((a) => a.ID_Alumno === idAlumno);
     const tchObj = usuarios.find((u) => u.ID_Usuario === idMaestro);
 
     const record: RegistroCualitativo = {
@@ -44,9 +56,36 @@ export async function POST(request: Request) {
       );
     }
 
+    // Auto-consolidate and sync group best results to Google Sheets
+    if (stObj) {
+      const cleanGrado = (stObj.Grado || '').replace(/[^0-9]/g, '');
+      const cleanGrupo = (stObj.Grupo || '').replace(/[^A-Z]/g, '');
+      const studentGrupo = cleanGrado && cleanGrupo ? `${cleanGrado}${cleanGrupo}` : (stObj.Grupo || '').trim();
+      if (studentGrupo) {
+        try {
+          const [allAtl, allCual] = await Promise.all([
+            getRegistrosAtletismo(),
+            getRegistrosCualitativos(),
+          ]);
+          const groupStudents = alumnos.filter((a) => isStudentInGrupo(a, studentGrupo));
+          const rowsData = groupStudents.map((st) =>
+            calculateBestMarksForStudent(st, allAtl, allCual)
+          );
+          await updateGrupoMejoresResultadosSheet(
+            studentGrupo,
+            cicloEscolar || '2026-2027',
+            nombreMaestro || (tchObj ? tchObj.Nombre : 'Profesor de Educación Física'),
+            rowsData
+          );
+        } catch (syncErr) {
+          console.warn('Auto-sync to Tabla de Mejores Resultados Consolidados failed:', syncErr);
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'Evaluación cualitativa guardada exitosamente',
+      message: 'Evaluación cualitativa guardada y consolidada exitosamente',
       record,
     });
   } catch (error) {

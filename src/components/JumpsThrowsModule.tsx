@@ -58,8 +58,10 @@ export default function JumpsThrowsModule({
 
       const body = {
         idAlumno: selectedStudent.ID_Alumno,
+        nombreAlumno: selectedStudent.Nombre_Completo,
         cicloEscolar,
         idMaestro: user?.id || 'USR-MAESTRO',
+        nombreMaestro: user?.nombre || 'Profesor',
         prueba,
         resultadoPrincipal: formattedBest,
         detalleJsonVueltas: {
@@ -101,8 +103,10 @@ export default function JumpsThrowsModule({
       setIsSubmitting(true);
       const body = {
         idAlumno: selectedStudent.ID_Alumno,
+        nombreAlumno: selectedStudent.Nombre_Completo,
         cicloEscolar,
         idMaestro: user?.id || 'USR-MAESTRO',
+        nombreMaestro: user?.nombre || 'Profesor',
         prueba,
         resultadoPrincipal: 'No Completada',
         detalleJsonVueltas: {

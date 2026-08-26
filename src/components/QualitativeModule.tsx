@@ -38,8 +38,10 @@ export default function QualitativeModule({
       setIsSubmitting(true);
       const body = {
         idAlumno: selectedStudent.ID_Alumno,
+        nombreAlumno: selectedStudent.Nombre_Completo,
         cicloEscolar,
         idMaestro: user?.id || 'USR-MAESTRO',
+        nombreMaestro: user?.nombre || 'Profesor',
         deporteOPrueba: deporte,
         calificacion,
       };

@@ -28,7 +28,11 @@ export async function POST(request: Request) {
       getUsuarios(),
     ]);
 
-    const stObj = alumnos.find((a) => a.ID_Alumno === idAlumno);
+    const cleanNombre = (nombreAlumno || '').trim().toLowerCase();
+    const stObj =
+      (cleanNombre
+        ? alumnos.find((a) => a.Nombre_Completo.trim().toLowerCase() === cleanNombre)
+        : null) || alumnos.find((a) => a.ID_Alumno === idAlumno);
     const tchObj = usuarios.find((u) => u.ID_Usuario === idMaestro);
 
     const record: RegistroAtletismo = {
