@@ -68,16 +68,40 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
     (user?.nombre?.toLowerCase().includes('diego armando') ||
      user?.correo?.toLowerCase().includes('diego.ibarra')) ?? false;
 
+  const isOrlandoCampos =
+    (user?.nombre?.toLowerCase().includes('orlando campos') ||
+     user?.correo?.toLowerCase().includes('orlando.campos')) ?? false;
+
   const isGroupDisabledForUser = (grado: string, grupo: string): boolean => {
-    if (!isDiegoArmando) return false;
     const cleanGrado = (grado || '').replace(/[^0-9]/g, '');
     const cleanGrupo = (grupo || '').trim().toUpperCase();
 
-    if (cleanGrado === '1' && ['A', 'B', 'C', 'D'].includes(cleanGrupo)) {
-      return true;
+    if (isDiegoArmando) {
+      if (cleanGrado === '1' && ['A', 'B', 'C', 'D'].includes(cleanGrupo)) {
+        return true;
+      }
+      if (cleanGrado === '2' && ['A', 'B', 'C'].includes(cleanGrupo)) {
+        return true;
+      }
     }
-    if (cleanGrado === '2' && ['A', 'B', 'C'].includes(cleanGrupo)) {
-      return true;
+
+    if (isOrlandoCampos) {
+      if (cleanGrado === '3' && ['A', 'B', 'C', 'D'].includes(cleanGrupo)) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  const isGradeDisabledForUser = (grado: string): boolean => {
+    if (!selectedNivel.toLowerCase().includes('primaria')) return false;
+    const cleanG = (grado || '').replace(/[^0-9]/g, '');
+    if (isDiegoArmando) {
+      return cleanG === '1' || cleanG === '2';
+    }
+    if (isOrlandoCampos) {
+      return cleanG === '3';
     }
     return false;
   };
@@ -176,14 +200,10 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
     const sortedGrados = availableGrados.length > 0 ? availableGrados : ['1', '2', '3', '4', '5', '6'];
     setGrados(sortedGrados);
 
-    if (isDiegoArmando && selectedNivel.toLowerCase().includes('primaria')) {
-      const validGrade = sortedGrados.find((g) => {
-        const cleanG = g.replace(/[^0-9]/g, '');
-        return cleanG !== '1' && cleanG !== '2';
-      }) || sortedGrados[0];
+    if ((isDiegoArmando || isOrlandoCampos) && selectedNivel.toLowerCase().includes('primaria')) {
+      const validGrade = sortedGrados.find((g) => !isGradeDisabledForUser(g)) || sortedGrados[0];
 
-      const currentCleanG = (selectedGrado || '').replace(/[^0-9]/g, '');
-      if (!selectedGrado || currentCleanG === '1' || currentCleanG === '2') {
+      if (!selectedGrado || isGradeDisabledForUser(selectedGrado)) {
         setSelectedGrado(validGrade);
         return;
       }
@@ -194,7 +214,7 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
     } else if (sortedGrados.length === 0) {
       setSelectedGrado('1');
     }
-  }, [selectedCiclo, selectedNivel, alumnos, isDiegoArmando]);
+  }, [selectedCiclo, selectedNivel, alumnos, isDiegoArmando, isOrlandoCampos]);
 
   // Update groups available for chosen Ciclo + Nivel + Grado
   useEffect(() => {
@@ -217,7 +237,7 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
     } else if (sortedGrupos.length === 0) {
       setSelectedGrupo('A');
     }
-  }, [selectedCiclo, selectedNivel, selectedGrado, alumnos, isDiegoArmando]);
+  }, [selectedCiclo, selectedNivel, selectedGrado, alumnos, isDiegoArmando, isOrlandoCampos]);
 
   // Update filtered final list of students
   useEffect(() => {
@@ -241,7 +261,7 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
       setSelectedAlumnoId('');
       onSelectStudent(null, selectedCiclo, list);
     }
-  }, [selectedCiclo, selectedNivel, selectedGrado, selectedGrupo, alumnos, isDiegoArmando]);
+  }, [selectedCiclo, selectedNivel, selectedGrado, selectedGrupo, alumnos, isDiegoArmando, isOrlandoCampos]);
 
   const handleStudentChange = (id: string) => {
     setSelectedAlumnoId(id);
@@ -326,8 +346,7 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
             className="w-full bg-slate-800/80 text-slate-100 text-sm rounded-xl px-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 transition-colors"
           >
             {grados.map((g) => {
-              const cleanG = g.replace(/[^0-9]/g, '');
-              const isGradeDisabled = isDiegoArmando && selectedNivel.toLowerCase().includes('primaria') && (cleanG === '1' || cleanG === '2');
+              const isGradeDisabled = isGradeDisabledForUser(g);
               return (
                 <option
                   key={g}
