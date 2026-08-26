@@ -11,7 +11,8 @@ import QualitativeModule from '@/components/QualitativeModule';
 import BestResultsTable from '@/components/BestResultsTable';
 import ExportPdfButton from '@/components/ExportPdfButton';
 import { AlumnoInscrito, UserSession, RegistroAntropometrico, RegistroAtletismo, RegistroCualitativo } from '@/lib/types';
-import { Timer, Target, HeartPulse, Award, Dumbbell, History, RefreshCw, Table } from 'lucide-react';
+import { calculateBestMarksForStudent } from '@/lib/mejoresResultados';
+import { Timer, Target, HeartPulse, Award, Dumbbell, History, RefreshCw, Table, Zap } from 'lucide-react';
 
 export default function MaestroPage() {
   const router = useRouter();
@@ -222,23 +223,51 @@ export default function MaestroPage() {
               </div>
               <button
                 onClick={() => loadStudentHistory(selectedStudent.ID_Alumno, selectedStudent.Nombre_Completo)}
-                className="text-xs text-emerald-400 hover:underline flex items-center gap-1"
+                className="text-xs text-emerald-400 hover:underline flex items-center gap-1 font-semibold"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loadingHistory ? 'animate-spin' : ''}`} /> Actualizar
               </button>
             </div>
 
+            {/* Quick Pillars Summary (Velocidad, Salto, Lanzamiento, Resistencia) */}
+            {(() => {
+              const bestMarks = calculateBestMarksForStudent(selectedStudent, recentHistory.atletismo, recentHistory.cualitativo);
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                  <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 text-center">
+                    <span className="text-[10px] font-extrabold text-emerald-400 uppercase tracking-wider block">🏃 Velocidad</span>
+                    <span className="text-sm font-black text-white font-mono">{bestMarks.velocidad}</span>
+                  </div>
+                  <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 text-center">
+                    <span className="text-[10px] font-extrabold text-amber-400 uppercase tracking-wider block">🦘 Salto</span>
+                    <span className="text-sm font-black text-white font-mono">{bestMarks.salto}</span>
+                  </div>
+                  <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 text-center">
+                    <span className="text-[10px] font-extrabold text-amber-300 uppercase tracking-wider block">🥎 Lanzamiento</span>
+                    <span className="text-sm font-black text-white font-mono">{bestMarks.lanzamiento}</span>
+                  </div>
+                  <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 text-center">
+                    <span className="text-[10px] font-extrabold text-cyan-400 uppercase tracking-wider block">⏱️ Resistencia</span>
+                    <span className="text-sm font-black text-white font-mono">{bestMarks.resistencia}</span>
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-              {/* Atletismo summary */}
+              {/* Atletismo, Saltos & Lanzamientos summary */}
               <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
-                <h4 className="font-bold text-emerald-400">Atletismo & Marcas ({recentHistory.atletismo.length})</h4>
+                <h4 className="font-bold text-emerald-400">Pruebas de Campo & Atletismo ({recentHistory.atletismo.length})</h4>
                 {recentHistory.atletismo.length === 0 ? (
                   <p className="text-slate-500">Sin marcas registradas</p>
                 ) : (
-                  recentHistory.atletismo.slice(0, 3).map((r, idx) => (
-                    <div key={idx} className="flex justify-between py-1 border-b border-slate-800/60">
-                      <span className="text-slate-300">{r.Prueba}:</span>
-                      <span className="font-mono font-bold text-white">{r.Resultado_Principal}</span>
+                  recentHistory.atletismo.slice(0, 6).map((r, idx) => (
+                    <div key={idx} className="flex justify-between items-center py-1.5 border-b border-slate-800/60">
+                      <div>
+                        <span className="text-slate-200 font-bold block">{r.Prueba}</span>
+                        {r.Fecha && <span className="text-[10px] text-slate-500">{r.Fecha}</span>}
+                      </div>
+                      <span className="font-mono font-black text-emerald-400 text-sm">{r.Resultado_Principal}</span>
                     </div>
                   ))
                 )}
@@ -248,12 +277,15 @@ export default function MaestroPage() {
               <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
                 <h4 className="font-bold text-cyan-400">Medidas & IMC ({recentHistory.antropometrico.length})</h4>
                 {recentHistory.antropometrico.length === 0 ? (
-                  <p className="text-slate-500">Sin fichas IMC registadas</p>
+                  <p className="text-slate-500">Sin fichas IMC registradas</p>
                 ) : (
-                  recentHistory.antropometrico.slice(0, 3).map((r, idx) => (
-                    <div key={idx} className="flex justify-between py-1 border-b border-slate-800/60">
-                      <span className="text-slate-300">{r.Fecha}:</span>
-                      <span className="font-mono font-bold text-white">IMC: {r.IMC} ({r.Peso_kg} kg)</span>
+                  recentHistory.antropometrico.slice(0, 6).map((r, idx) => (
+                    <div key={idx} className="flex justify-between items-center py-1.5 border-b border-slate-800/60">
+                      <div>
+                        <span className="text-slate-200 font-bold block">Ficha IMC</span>
+                        {r.Fecha && <span className="text-[10px] text-slate-500">{r.Fecha}</span>}
+                      </div>
+                      <span className="font-mono font-black text-cyan-400 text-sm">IMC: {r.IMC} ({r.Peso_kg} kg)</span>
                     </div>
                   ))
                 )}
@@ -265,10 +297,13 @@ export default function MaestroPage() {
                 {recentHistory.cualitativo.length === 0 ? (
                   <p className="text-slate-500">Sin evaluaciones registradas</p>
                 ) : (
-                  recentHistory.cualitativo.slice(0, 3).map((r, idx) => (
-                    <div key={idx} className="flex justify-between py-1 border-b border-slate-800/60">
-                      <span className="text-slate-300">{r.Deporte_o_Prueba}:</span>
-                      <span className="font-bold text-white">{r.Calificacion}</span>
+                  recentHistory.cualitativo.slice(0, 6).map((r, idx) => (
+                    <div key={idx} className="flex justify-between items-center py-1.5 border-b border-slate-800/60">
+                      <div>
+                        <span className="text-slate-200 font-bold block">{r.Deporte_o_Prueba}</span>
+                        {r.Fecha && <span className="text-[10px] text-slate-500">{r.Fecha}</span>}
+                      </div>
+                      <span className="font-bold text-purple-300 text-sm">{r.Calificacion}</span>
                     </div>
                   ))
                 )}
