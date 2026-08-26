@@ -211,12 +211,12 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
       onSelectStudent(null, selectedCiclo, filteredAlumnos);
       return;
     }
-    const st = alumnos.find((a) => a.ID_Alumno === id) || null;
+    const st = filteredAlumnos.find((a) => a.ID_Alumno === id) || alumnos.find((a) => a.ID_Alumno === id) || null;
     onSelectStudent(st, selectedCiclo, filteredAlumnos);
   };
 
   const selectedStudentObj = selectedAlumnoId
-    ? alumnos.find((a) => a.ID_Alumno && a.ID_Alumno === selectedAlumnoId) || null
+    ? filteredAlumnos.find((a) => a.ID_Alumno && a.ID_Alumno === selectedAlumnoId) || alumnos.find((a) => a.ID_Alumno && a.ID_Alumno === selectedAlumnoId) || null
     : null;
 
   return (

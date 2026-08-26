@@ -13,6 +13,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const studentIdParam = searchParams.get('studentId');
+    const nameParam = searchParams.get('name');
     const emailParam = searchParams.get('email');
 
     const alumnos = await getAlumnosInscritos();
@@ -20,7 +21,12 @@ export async function GET(request: Request) {
 
     let targetStudent = null;
 
-    if (studentIdParam) {
+    if (nameParam) {
+      const cleanName = nameParam.trim().toLowerCase();
+      targetStudent = alumnos.find((a) => a.Nombre_Completo.trim().toLowerCase() === cleanName) || null;
+    }
+
+    if (!targetStudent && studentIdParam) {
       const q = studentIdParam.trim().toLowerCase();
       targetStudent =
         alumnos.find(
@@ -28,7 +34,7 @@ export async function GET(request: Request) {
             a.ID_Alumno.toLowerCase() === q ||
             a.Nombre_Completo.toLowerCase().includes(q)
         ) || null;
-    } else if (emailParam) {
+    } else if (!targetStudent && emailParam) {
       const emailClean = emailParam.trim().toLowerCase();
       const userMatch = usuarios.find((u) => u.Correo.toLowerCase() === emailClean);
       if (userMatch) {
@@ -66,10 +72,23 @@ export async function GET(request: Request) {
     ]);
 
     const studentId = targetStudent?.ID_Alumno;
+    const studentNameClean = targetStudent?.Nombre_Completo?.trim().toLowerCase();
 
-    const studentAntro = antropometricos.filter((r) => r.ID_Alumno === studentId);
-    const studentAtl = atletismo.filter((r) => r.ID_Alumno === studentId);
-    const studentCua = cualitativos.filter((r) => r.ID_Alumno === studentId);
+    const matchesRecord = (r: { ID_Alumno?: string; Nombre_Alumno?: string }) => {
+      if (studentId && r.ID_Alumno === studentId) {
+        if (!r.Nombre_Alumno || !studentNameClean || r.Nombre_Alumno.trim().toLowerCase() === studentNameClean) {
+          return true;
+        }
+      }
+      if (studentNameClean && r.Nombre_Alumno && r.Nombre_Alumno.trim().toLowerCase() === studentNameClean) {
+        return true;
+      }
+      return false;
+    };
+
+    const studentAntro = antropometricos.filter(matchesRecord);
+    const studentAtl = atletismo.filter(matchesRecord);
+    const studentCua = cualitativos.filter(matchesRecord);
 
     return NextResponse.json({
       success: true,

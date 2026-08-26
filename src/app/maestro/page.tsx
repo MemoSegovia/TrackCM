@@ -50,10 +50,11 @@ export default function MaestroPage() {
     }
   }, [router]);
 
-  const loadStudentHistory = async (studentId: string) => {
+  const loadStudentHistory = async (studentId: string, name?: string) => {
     try {
       setLoadingHistory(true);
-      const res = await fetch(`/api/historial?studentId=${studentId}`);
+      const nameParam = name ? `&name=${encodeURIComponent(name)}` : '';
+      const res = await fetch(`/api/historial?studentId=${encodeURIComponent(studentId)}${nameParam}`);
       const data = await res.json();
       if (data.success && data.historial) {
         setRecentHistory(data.historial);
@@ -76,7 +77,9 @@ export default function MaestroPage() {
       setGroupStudents(groupStudentsList);
     }
     if (student) {
-      loadStudentHistory(student.ID_Alumno);
+      loadStudentHistory(student.ID_Alumno, student.Nombre_Completo);
+    } else {
+      setRecentHistory({ antropometrico: [], atletismo: [], cualitativo: [] });
     }
   };
 
@@ -171,7 +174,7 @@ export default function MaestroPage() {
               cicloEscolar={cicloEscolar}
               user={user}
               groupStudents={groupStudents}
-              onRecordSaved={() => selectedStudent && loadStudentHistory(selectedStudent.ID_Alumno)}
+              onRecordSaved={() => selectedStudent && loadStudentHistory(selectedStudent.ID_Alumno, selectedStudent.Nombre_Completo)}
             />
           )}
 
@@ -180,7 +183,7 @@ export default function MaestroPage() {
               selectedStudent={selectedStudent}
               cicloEscolar={cicloEscolar}
               user={user}
-              onRecordSaved={() => selectedStudent && loadStudentHistory(selectedStudent.ID_Alumno)}
+              onRecordSaved={() => selectedStudent && loadStudentHistory(selectedStudent.ID_Alumno, selectedStudent.Nombre_Completo)}
             />
           )}
 
@@ -189,7 +192,7 @@ export default function MaestroPage() {
               selectedStudent={selectedStudent}
               cicloEscolar={cicloEscolar}
               user={user}
-              onRecordSaved={() => selectedStudent && loadStudentHistory(selectedStudent.ID_Alumno)}
+              onRecordSaved={() => selectedStudent && loadStudentHistory(selectedStudent.ID_Alumno, selectedStudent.Nombre_Completo)}
             />
           )}
 
@@ -198,7 +201,7 @@ export default function MaestroPage() {
               selectedStudent={selectedStudent}
               cicloEscolar={cicloEscolar}
               user={user}
-              onRecordSaved={() => selectedStudent && loadStudentHistory(selectedStudent.ID_Alumno)}
+              onRecordSaved={() => selectedStudent && loadStudentHistory(selectedStudent.ID_Alumno, selectedStudent.Nombre_Completo)}
             />
           )}
 
@@ -218,7 +221,7 @@ export default function MaestroPage() {
                 </h3>
               </div>
               <button
-                onClick={() => loadStudentHistory(selectedStudent.ID_Alumno)}
+                onClick={() => loadStudentHistory(selectedStudent.ID_Alumno, selectedStudent.Nombre_Completo)}
                 className="text-xs text-emerald-400 hover:underline flex items-center gap-1"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loadingHistory ? 'animate-spin' : ''}`} /> Actualizar
