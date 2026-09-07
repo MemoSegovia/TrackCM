@@ -16,15 +16,16 @@ export function normalizeNivelName(nivelRaw?: string): string {
 }
 
 /**
- * Retorna la lista de pruebas habilitadas según el Nivel Escolar seleccionado:
+ * Retorna la lista de pruebas habilitadas según el Nivel Escolar y Grado seleccionado:
  * - Kinder: 50m Velocidad, 200m Resistencia, Salto, Lanzamiento, Salto de Cuerda, Orden y Control, ABC
- * - Primaria Menor: 75m Velocidad, 200m Resistencia, Salto, Lanzamiento, Salto de Cuerda, Orden y Control, ABC
- * - Primaria Mayor: 75m Velocidad, 600m Resistencia, Salto, Lanzamiento, Salto de Cuerda, Orden y Control, ABC
+ * - Primaria Menor: 75m Velocidad, 200m Resistencia (1° y 2°) / 400m Resistencia (3°), Salto, Lanzamiento, Salto de Cuerda, Orden y Control, ABC
+ * - Primaria Mayor: 75m Velocidad, 400m Resistencia (4°) / 600m Resistencia (5° y 6°), Salto, Lanzamiento, Salto de Cuerda, Orden y Control, ABC
  * - Secundaria: 75m Velocidad, 100m Velocidad, 800m Resistencia, Salto, Lanzamiento, Salto de Cuerda, Orden y Control, ABC
  * - Preparatoria: 75m Velocidad, 100m Velocidad, 800m Resistencia, Salto, Lanzamiento, Salto de Cuerda, Orden y Control, ABC
  */
-export function getPruebasByNivel(nivelRaw?: string): OptionPrueba[] {
+export function getPruebasByNivel(nivelRaw?: string, gradoRaw?: string): OptionPrueba[] {
   const normNivel = normalizeNivelName(nivelRaw);
+  const cleanGrado = (gradoRaw || '').replace(/[^0-9]/g, '');
 
   switch (normNivel) {
     case 'Kinder':
@@ -39,9 +40,20 @@ export function getPruebasByNivel(nivelRaw?: string): OptionPrueba[] {
       ];
 
     case 'Primaria Menor':
+      // 3° Grado: 400m Resistencia. 1° y 2°: 200m Resistencia.
+      const resPruebasPMenor: OptionPrueba[] = [];
+      if (cleanGrado === '3') {
+        resPruebasPMenor.push({ value: '400m Resistencia', label: '400m Resistencia', category: 'resistencia' });
+      } else if (cleanGrado === '1' || cleanGrado === '2') {
+        resPruebasPMenor.push({ value: '200m Resistencia', label: '200m Resistencia', category: 'resistencia' });
+      } else {
+        resPruebasPMenor.push({ value: '200m Resistencia', label: '200m Resistencia (1° y 2°)', category: 'resistencia' });
+        resPruebasPMenor.push({ value: '400m Resistencia', label: '400m Resistencia (3°)', category: 'resistencia' });
+      }
+
       return [
         { value: '75m Velocidad', label: '75m Velocidad', category: 'velocidad' },
-        { value: '200m Resistencia', label: '200m Resistencia', category: 'resistencia' },
+        ...resPruebasPMenor,
         { value: 'Salto', label: 'Salto', category: 'campo' },
         { value: 'Lanzamiento', label: 'Lanzamiento', category: 'campo' },
         { value: 'Salto de Cuerda', label: 'Salto de Cuerda', category: 'evaluacion' },
@@ -50,9 +62,20 @@ export function getPruebasByNivel(nivelRaw?: string): OptionPrueba[] {
       ];
 
     case 'Primaria Mayor':
+      // 4° Grado: 400m Resistencia. 5° y 6°: 600m Resistencia.
+      const resPruebasPMayor: OptionPrueba[] = [];
+      if (cleanGrado === '4') {
+        resPruebasPMayor.push({ value: '400m Resistencia', label: '400m Resistencia', category: 'resistencia' });
+      } else if (cleanGrado === '5' || cleanGrado === '6') {
+        resPruebasPMayor.push({ value: '600m Resistencia', label: '600m Resistencia', category: 'resistencia' });
+      } else {
+        resPruebasPMayor.push({ value: '400m Resistencia', label: '400m Resistencia (4°)', category: 'resistencia' });
+        resPruebasPMayor.push({ value: '600m Resistencia', label: '600m Resistencia (5° y 6°)', category: 'resistencia' });
+      }
+
       return [
         { value: '75m Velocidad', label: '75m Velocidad', category: 'velocidad' },
-        { value: '600m Resistencia', label: '600m Resistencia', category: 'resistencia' },
+        ...resPruebasPMayor,
         { value: 'Salto', label: 'Salto', category: 'campo' },
         { value: 'Lanzamiento', label: 'Lanzamiento', category: 'campo' },
         { value: 'Salto de Cuerda', label: 'Salto de Cuerda', category: 'evaluacion' },
@@ -90,6 +113,7 @@ export function getPruebasByNivel(nivelRaw?: string): OptionPrueba[] {
         { value: '75m Velocidad', label: '75m Velocidad', category: 'velocidad' },
         { value: '100m Velocidad', label: '100m Velocidad', category: 'velocidad' },
         { value: '200m Resistencia', label: '200m Resistencia', category: 'resistencia' },
+        { value: '400m Resistencia', label: '400m Resistencia', category: 'resistencia' },
         { value: '600m Resistencia', label: '600m Resistencia', category: 'resistencia' },
         { value: '800m Resistencia', label: '800m Resistencia', category: 'resistencia' },
         { value: 'Salto', label: 'Salto', category: 'campo' },

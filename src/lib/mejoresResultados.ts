@@ -158,11 +158,14 @@ export function calculateBestMarksForStudent(
     });
   }
 
-  // 4. Resistencia (800m, 1500m, Pruebas de Resistencia, Fondo, Vueltas)
+  // 4. Resistencia (200m, 400m, 600m, 800m, 1500m, Pruebas de Resistencia, Fondo, Vueltas)
   const resRecs = studentAtl.filter(
     (r) =>
       r.Resultado_Principal !== 'No Completada' &&
       (r.Prueba.toLowerCase().includes('resistencia') ||
+        r.Prueba.toLowerCase().includes('200m') ||
+        r.Prueba.toLowerCase().includes('400m') ||
+        r.Prueba.toLowerCase().includes('600m') ||
         r.Prueba.toLowerCase().includes('800m') ||
         r.Prueba.toLowerCase().includes('1500m') ||
         r.Prueba.toLowerCase().includes('fondo') ||

@@ -10,6 +10,7 @@ import { getPruebasByNivel, normalizeNivelName } from '@/lib/pruebasNivel';
 interface StopwatchModuleProps {
   selectedStudent: AlumnoInscrito | null;
   selectedNivel?: string;
+  selectedGrado?: string;
   cicloEscolar: string;
   user: UserSession | null;
   groupStudents?: AlumnoInscrito[];
@@ -19,6 +20,7 @@ interface StopwatchModuleProps {
 export default function StopwatchModule({
   selectedStudent,
   selectedNivel,
+  selectedGrado,
   cicloEscolar,
   user,
   groupStudents,
@@ -27,8 +29,9 @@ export default function StopwatchModule({
   const [mode, setMode] = useState<'individual' | 'multi'>('individual');
   
   const activeNivel = selectedStudent?.Nivel || selectedNivel || '';
+  const activeGrado = selectedStudent?.Grado || selectedGrado || '';
   const normNivel = normalizeNivelName(activeNivel);
-  const availablePruebas = getPruebasByNivel(activeNivel);
+  const availablePruebas = getPruebasByNivel(activeNivel, activeGrado);
 
   const [prueba, setPrueba] = useState<string>(() => availablePruebas[0]?.value || '75m Velocidad');
 
@@ -36,7 +39,7 @@ export default function StopwatchModule({
     if (availablePruebas.length > 0 && !availablePruebas.some((p) => p.value === prueba)) {
       setPrueba(availablePruebas[0].value);
     }
-  }, [activeNivel]);
+  }, [activeNivel, activeGrado]);
 
   // Single mode stopwatch state
   const [elapsedTime, setElapsedTime] = useState<number>(0);

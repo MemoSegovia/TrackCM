@@ -10,7 +10,8 @@ interface StudentSelectorProps {
     student: AlumnoInscrito | null,
     ciclo: string,
     groupStudents?: AlumnoInscrito[],
-    selectedNivel?: string
+    selectedNivel?: string,
+    selectedGrado?: string
   ) => void;
   user?: UserSession | null;
   selectedStudentId?: string;
@@ -261,21 +262,21 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
       : null;
 
     if (exists) {
-      onSelectStudent(exists, selectedCiclo, list, selectedNivel);
+      onSelectStudent(exists, selectedCiclo, list, selectedNivel, selectedGrado);
     } else {
       setSelectedAlumnoId('');
-      onSelectStudent(null, selectedCiclo, list, selectedNivel);
+      onSelectStudent(null, selectedCiclo, list, selectedNivel, selectedGrado);
     }
   }, [selectedCiclo, selectedNivel, selectedGrado, selectedGrupo, alumnos, isDiegoArmando, isOrlandoCampos]);
 
   const handleStudentChange = (id: string) => {
     setSelectedAlumnoId(id);
     if (!id) {
-      onSelectStudent(null, selectedCiclo, filteredAlumnos, selectedNivel);
+      onSelectStudent(null, selectedCiclo, filteredAlumnos, selectedNivel, selectedGrado);
       return;
     }
     const st = filteredAlumnos.find((a) => a.ID_Alumno === id) || alumnos.find((a) => a.ID_Alumno === id) || null;
-    onSelectStudent(st, selectedCiclo, filteredAlumnos, selectedNivel);
+    onSelectStudent(st, selectedCiclo, filteredAlumnos, selectedNivel, selectedGrado);
   };
 
   const selectedStudentObj = selectedAlumnoId

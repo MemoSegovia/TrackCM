@@ -19,6 +19,7 @@ export default function MaestroPage() {
   const [user, setUser] = useState<UserSession | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<AlumnoInscrito | null>(null);
   const [selectedNivel, setSelectedNivel] = useState<string>('');
+  const [selectedGrado, setSelectedGrado] = useState<string>('');
   const [groupStudents, setGroupStudents] = useState<AlumnoInscrito[]>([]);
   const [cicloEscolar, setCicloEscolar] = useState<string>('2026-2027');
   const [activeTab, setActiveTab] = useState<'stopwatch' | 'jumps' | 'antro' | 'qualitative' | 'best-results'>('stopwatch');
@@ -118,12 +119,16 @@ export default function MaestroPage() {
     student: AlumnoInscrito | null,
     ciclo: string,
     groupStudentsList?: AlumnoInscrito[],
-    nivel?: string
+    nivel?: string,
+    grado?: string
   ) => {
     setSelectedStudent(student);
     setCicloEscolar(ciclo);
     if (nivel) {
       setSelectedNivel(nivel);
+    }
+    if (grado) {
+      setSelectedGrado(grado);
     }
     if (groupStudentsList) {
       setGroupStudents(groupStudentsList);
@@ -224,6 +229,7 @@ export default function MaestroPage() {
             <StopwatchModule
               selectedStudent={selectedStudent}
               selectedNivel={selectedStudent?.Nivel || selectedNivel}
+              selectedGrado={selectedStudent?.Grado || selectedGrado}
               cicloEscolar={cicloEscolar}
               user={user}
               groupStudents={groupStudents}
