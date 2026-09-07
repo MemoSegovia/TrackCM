@@ -9,6 +9,8 @@ import { Activity, Trophy, HeartPulse, Award, Search, Table, RefreshCw, Zap, Che
 import { calculateIMC } from '@/lib/utils';
 import { calculateBestMarksForStudent } from '@/lib/mejoresResultados';
 
+import StudentSelector from '@/components/StudentSelector';
+
 export default function AlumnoPage() {
   const [user, setUser] = useState<UserSession | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -94,7 +96,7 @@ export default function AlumnoPage() {
 
       if (data.success) {
         if (student.ID_Alumno) {
-          await fetchHistorial(student.ID_Alumno);
+          await fetchHistorial(student.ID_Alumno, student.Nombre_Completo);
         }
       } else {
         alert(data.error || 'Error al borrar la prueba');
@@ -134,20 +136,26 @@ export default function AlumnoPage() {
     }
   }, []);
 
-  const fetchHistorial = async (query: string) => {
-    if (!query) return;
+  const fetchHistorial = async (query: string, name?: string) => {
+    if (!query && !name) return;
     try {
       setLoading(true);
       setSearched(true);
 
-      const isEmail = query.includes('@');
-      const param = isEmail ? `email=${encodeURIComponent(query)}` : `studentId=${encodeURIComponent(query)}`;
+      let param = '';
+      if (name) {
+        param = `name=${encodeURIComponent(name)}`;
+      } else if (query.includes('@')) {
+        param = `email=${encodeURIComponent(query)}`;
+      } else {
+        param = `studentId=${encodeURIComponent(query)}`;
+      }
 
       const res = await fetch(`/api/historial?${param}`);
       const data = await res.json();
 
-      if (data.success) {
-        setStudent(data.alumno || null);
+      if (data.success && data.alumno) {
+        setStudent(data.alumno);
         setHistorial(data.historial || { antropometrico: [], atletismo: [], cualitativo: [] });
       } else {
         setStudent(null);
@@ -164,6 +172,14 @@ export default function AlumnoPage() {
     e.preventDefault();
     if (searchQuery.trim()) {
       fetchHistorial(searchQuery.trim());
+    }
+  };
+
+  const handleStudentSelectedFromSelector = (st: AlumnoInscrito | null) => {
+    if (st) {
+      fetchHistorial('', st.Nombre_Completo);
+    } else {
+      setStudent(null);
     }
   };
 
@@ -185,7 +201,7 @@ export default function AlumnoPage() {
               </h1>
               <p className="text-xs text-slate-400">
                 {isTeacherOrAdmin
-                  ? 'Consulta el historial buscando por nombre de alumno, ID o correo'
+                  ? 'Filtra por Nivel, Grado y Grupo para seleccionar un alumno o busca por nombre/ID'
                   : user
                   ? `Registros pertenecientes a ${user.nombre}`
                   : 'Consulta de expediente de educación física'}
@@ -193,40 +209,51 @@ export default function AlumnoPage() {
             </div>
 
             <div className="flex flex-col sm:flex-row items-center gap-2 max-w-lg w-full justify-end">
-              {/* Search Form for Teachers and Administrators */}
-              {isTeacherOrAdmin && (
-                <form onSubmit={handleSearchSubmit} className="flex gap-2 flex-1 w-full">
-                  <div className="relative flex-1">
-                    <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                    <input
-                      type="text"
-                      placeholder="Escribe el nombre del alumno, ID o correo..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full bg-slate-950 text-slate-100 text-xs rounded-xl pl-9 pr-3 py-2.5 border border-slate-700 focus:outline-none focus:border-cyan-500"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="px-4 py-2.5 rounded-xl font-bold text-xs bg-cyan-500 hover:bg-cyan-600 text-slate-950 transition-all shadow-md shadow-cyan-500/20 flex items-center gap-1.5"
-                  >
-                    {loading ? 'Buscando...' : 'Buscar'}
-                  </button>
-                </form>
-              )}
-
               {/* Export PDF Button */}
               {student && (
                 <ExportPdfButton
                   elementId="student-full-report"
                   fileName={`Historial_${student.Nombre_Completo.replace(/\s+/g, '_')}.pdf`}
                   title={`Historial de ${student.Nombre_Completo}`}
-                  buttonText="PDF"
+                  buttonText="PDF Historial"
                 />
               )}
             </div>
           </div>
+
+          {/* Cascading Student Selector for Teachers and Administrators */}
+          {isTeacherOrAdmin && (
+            <div className="space-y-4 pt-1">
+              <StudentSelector
+                user={user}
+                selectedStudentId={student?.ID_Alumno}
+                onSelectStudent={handleStudentSelectedFromSelector}
+              />
+
+              {/* Alternative Manual Search Bar */}
+              <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-3">
+                <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-2">
+                  <div className="relative flex-1">
+                    <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
+                    <input
+                      type="text"
+                      placeholder="Búsqueda rápida por nombre exacto, ID o correo..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full bg-slate-900 text-slate-100 text-xs rounded-xl pl-9 pr-3 py-2.5 border border-slate-700 focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-4 py-2.5 rounded-xl font-bold text-xs bg-cyan-500 hover:bg-cyan-600 text-slate-950 transition-all shadow-md shadow-cyan-500/20 flex items-center justify-center gap-1.5"
+                  >
+                    {loading ? 'Buscando...' : 'Buscar Manual'}
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
 
           {/* Loading State */}
           {loading && (

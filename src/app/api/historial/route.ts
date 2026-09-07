@@ -75,13 +75,12 @@ export async function GET(request: Request) {
     const studentNameClean = targetStudent?.Nombre_Completo?.trim().toLowerCase();
 
     const matchesRecord = (r: { ID_Alumno?: string; Nombre_Alumno?: string }) => {
-      if (studentId && r.ID_Alumno === studentId) {
-        if (!r.Nombre_Alumno || !studentNameClean || r.Nombre_Alumno.trim().toLowerCase() === studentNameClean) {
-          return true;
-        }
+      const recName = (r.Nombre_Alumno || '').trim().toLowerCase().replace(/\s+/g, ' ');
+      if (recName && studentNameClean) {
+        return recName === studentNameClean.replace(/\s+/g, ' ');
       }
-      if (studentNameClean && r.Nombre_Alumno && r.Nombre_Alumno.trim().toLowerCase() === studentNameClean) {
-        return true;
+      if (r.ID_Alumno && studentId) {
+        return r.ID_Alumno === studentId;
       }
       return false;
     };
