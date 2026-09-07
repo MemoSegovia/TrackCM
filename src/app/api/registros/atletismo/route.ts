@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
   addRegistroAtletismo,
+  deleteRegistroAtletismo,
   getAlumnosInscritos,
   getRegistrosAtletismo,
   getRegistrosCualitativos,
@@ -94,6 +95,93 @@ export async function POST(request: Request) {
     console.error('Error adding atletismo record:', error);
     return NextResponse.json(
       { success: false, error: 'Error interno al guardar marca de atletismo' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const idRegistro = searchParams.get('idRegistro');
+    const idAlumno = searchParams.get('idAlumno');
+    const cicloEscolar = searchParams.get('cicloEscolar');
+    const fecha = searchParams.get('fecha');
+    const prueba = searchParams.get('prueba');
+    const resultadoPrincipal = searchParams.get('resultadoPrincipal');
+
+    let bodyData: any = {};
+    if (!idRegistro) {
+      try {
+        bodyData = await request.json();
+      } catch (e) {}
+    }
+
+    const regId = idRegistro || bodyData.idRegistro;
+    const almId = idAlumno || bodyData.idAlumno;
+    const ciclo = cicloEscolar || bodyData.cicloEscolar || '2026-2027';
+
+    if (!regId && !almId) {
+      return NextResponse.json(
+        { success: false, error: 'ID de registro o ID de alumno es requerido para eliminar' },
+        { status: 400 }
+      );
+    }
+
+    const deleted = await deleteRegistroAtletismo(
+      regId,
+      almId,
+      fecha || bodyData.fecha,
+      prueba || bodyData.prueba,
+      resultadoPrincipal || bodyData.resultadoPrincipal
+    );
+
+    if (!deleted) {
+      return NextResponse.json(
+        { success: false, error: 'No se pudo eliminar el registro de Registros_Atletismo' },
+        { status: 500 }
+      );
+    }
+
+    // Auto-reconsolidate group table if student is found
+    if (almId) {
+      try {
+        const alumnos = await getAlumnosInscritos();
+        const stObj = alumnos.find((a) => a.ID_Alumno === almId);
+        if (stObj) {
+          const cleanGrado = (stObj.Grado || '').replace(/[^0-9]/g, '');
+          const cleanGrupo = (stObj.Grupo || '').replace(/[^A-Z]/g, '');
+          const studentGrupo = cleanGrado && cleanGrupo ? `${cleanGrado}${cleanGrupo}` : (stObj.Grupo || '').trim();
+          if (studentGrupo) {
+            const [allAtl, allCual] = await Promise.all([
+              getRegistrosAtletismo(),
+              getRegistrosCualitativos(),
+            ]);
+            const groupStudents = alumnos.filter((a) => isStudentInGrupo(a, studentGrupo));
+            const rowsData = groupStudents.map((st) =>
+              calculateBestMarksForStudent(st, allAtl, allCual)
+            );
+            await updateGrupoMejoresResultadosSheet(
+              studentGrupo,
+              ciclo,
+              'Profesor de Educación Física',
+              rowsData
+            );
+          }
+        }
+      } catch (syncErr) {
+        console.warn('Auto-sync group table after delete failed:', syncErr);
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Marca de atletismo eliminada exitosamente de Registros_Atletismo',
+    });
+  } catch (error) {
+    console.error('Error deleting atletismo record:', error);
+    return NextResponse.json(
+      { success: false, error: 'Error interno al eliminar registro de atletismo' },
       { status: 500 }
     );
   }

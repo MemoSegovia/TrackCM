@@ -12,7 +12,7 @@ import BestResultsTable from '@/components/BestResultsTable';
 import ExportPdfButton from '@/components/ExportPdfButton';
 import { AlumnoInscrito, UserSession, RegistroAntropometrico, RegistroAtletismo, RegistroCualitativo } from '@/lib/types';
 import { calculateBestMarksForStudent } from '@/lib/mejoresResultados';
-import { Timer, Target, HeartPulse, Award, Dumbbell, History, RefreshCw, Table, Zap } from 'lucide-react';
+import { Timer, Target, HeartPulse, Award, Dumbbell, History, RefreshCw, Table, Zap, Trash2, Loader2 } from 'lucide-react';
 
 export default function MaestroPage() {
   const router = useRouter();
@@ -29,6 +29,10 @@ export default function MaestroPage() {
     cualitativo: RegistroCualitativo[];
   }>({ antropometrico: [], atletismo: [], cualitativo: [] });
   const [loadingHistory, setLoadingHistory] = useState<boolean>(false);
+
+  // Deletion state
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteMsg, setDeleteMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -64,6 +68,48 @@ export default function MaestroPage() {
       console.error(err);
     } finally {
       setLoadingHistory(false);
+    }
+  };
+
+  const handleDeleteAtletismoRecord = async (record: RegistroAtletismo) => {
+    if (!selectedStudent) return;
+
+    const targetKey = record.ID_Registro || `${record.Prueba}-${record.Fecha}`;
+    const confirmText = `¿Estás seguro de borrar la prueba de "${record.Prueba}" (${record.Resultado_Principal}) realizada por ${selectedStudent.Nombre_Completo}? Esta marca se eliminará permanentemente de Registros_Atletismo.`;
+
+    if (!window.confirm(confirmText)) return;
+
+    try {
+      setDeletingId(targetKey);
+      setDeleteMsg(null);
+
+      const params = new URLSearchParams({
+        idRegistro: record.ID_Registro || '',
+        idAlumno: record.ID_Alumno || selectedStudent.ID_Alumno,
+        cicloEscolar: cicloEscolar,
+        fecha: record.Fecha || '',
+        prueba: record.Prueba || '',
+        resultadoPrincipal: record.Resultado_Principal || '',
+      });
+
+      const res = await fetch(`/api/registros/atletismo?${params.toString()}`, {
+        method: 'DELETE',
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setDeleteMsg({ text: 'Prueba eliminada exitosamente de Registros_Atletismo', type: 'success' });
+        await loadStudentHistory(selectedStudent.ID_Alumno, selectedStudent.Nombre_Completo);
+        setTimeout(() => setDeleteMsg(null), 4000);
+      } else {
+        setDeleteMsg({ text: data.error || 'Error al borrar la prueba', type: 'error' });
+      }
+    } catch (err) {
+      console.error('Error al borrar la prueba:', err);
+      setDeleteMsg({ text: 'Error de red o servidor al borrar la prueba', type: 'error' });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -257,19 +303,54 @@ export default function MaestroPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
               {/* Atletismo, Saltos & Lanzamientos summary */}
               <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
-                <h4 className="font-bold text-emerald-400">Pruebas de Campo & Atletismo ({recentHistory.atletismo.length})</h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-emerald-400">Pruebas de Campo & Atletismo ({recentHistory.atletismo.length})</h4>
+                </div>
+
+                {deleteMsg && (
+                  <div
+                    className={`p-2 rounded-lg text-[11px] font-bold ${
+                      deleteMsg.type === 'success'
+                        ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
+                        : 'bg-rose-500/10 border border-rose-500/30 text-rose-400'
+                    }`}
+                  >
+                    {deleteMsg.text}
+                  </div>
+                )}
+
                 {recentHistory.atletismo.length === 0 ? (
                   <p className="text-slate-500">Sin marcas registradas</p>
                 ) : (
-                  recentHistory.atletismo.slice(0, 6).map((r, idx) => (
-                    <div key={idx} className="flex justify-between items-center py-1.5 border-b border-slate-800/60">
-                      <div>
-                        <span className="text-slate-200 font-bold block">{r.Prueba}</span>
-                        {r.Fecha && <span className="text-[10px] text-slate-500">{r.Fecha}</span>}
-                      </div>
-                      <span className="font-mono font-black text-emerald-400 text-sm">{r.Resultado_Principal}</span>
-                    </div>
-                  ))
+                  <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+                    {recentHistory.atletismo.map((r, idx) => {
+                      const itemKey = r.ID_Registro || `${r.Prueba}-${r.Fecha}-${idx}`;
+                      const isDeleting = deletingId === itemKey || deletingId === (r.ID_Registro || `${r.Prueba}-${r.Fecha}`);
+                      return (
+                        <div key={itemKey} className="flex justify-between items-center py-1.5 border-b border-slate-800/60 group">
+                          <div>
+                            <span className="text-slate-200 font-bold block">{r.Prueba}</span>
+                            {r.Fecha && <span className="text-[10px] text-slate-500">{r.Fecha}</span>}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-black text-emerald-400 text-sm">{r.Resultado_Principal}</span>
+                            <button
+                              onClick={() => handleDeleteAtletismoRecord(r)}
+                              disabled={isDeleting}
+                              title="Borrar esta prueba realizada"
+                              className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 active:scale-95 transition-all"
+                            >
+                              {isDeleting ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
+                              ) : (
+                                <Trash2 className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
 

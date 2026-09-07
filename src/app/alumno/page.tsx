@@ -5,7 +5,7 @@ import Navbar from '@/components/Navbar';
 import PerformanceCharts from '@/components/PerformanceCharts';
 import ExportPdfButton from '@/components/ExportPdfButton';
 import { UserSession, AlumnoInscrito, RegistroAntropometrico, RegistroAtletismo, RegistroCualitativo } from '@/lib/types';
-import { Activity, Trophy, HeartPulse, Award, Search, Table, RefreshCw, Zap, CheckCircle } from 'lucide-react';
+import { Activity, Trophy, HeartPulse, Award, Search, Table, RefreshCw, Zap, CheckCircle, Trash2, Loader2 } from 'lucide-react';
 import { calculateIMC } from '@/lib/utils';
 import { calculateBestMarksForStudent } from '@/lib/mejoresResultados';
 
@@ -23,6 +23,7 @@ export default function AlumnoPage() {
   const [searched, setSearched] = useState<boolean>(false);
   const [syncingConsolidado, setSyncingConsolidado] = useState<boolean>(false);
   const [syncMsg, setSyncMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const rolLower = user?.rol?.toLowerCase() || '';
   const isTeacherOrAdmin = rolLower === 'maestro' || rolLower === 'profesor' || rolLower === 'administrador' || rolLower === 'admin';
@@ -62,6 +63,47 @@ export default function AlumnoPage() {
       });
     } finally {
       setSyncingConsolidado(false);
+    }
+  };
+
+  const handleDeleteAtletismoRecord = async (record: RegistroAtletismo) => {
+    if (!student) return;
+
+    const targetKey = record.ID_Registro || `${record.Prueba}-${record.Fecha}`;
+    const confirmText = `¿Estás seguro de borrar la prueba de "${record.Prueba}" (${record.Resultado_Principal}) realizada por ${student.Nombre_Completo}? Esta marca se eliminará permanentemente de Registros_Atletismo.`;
+
+    if (!window.confirm(confirmText)) return;
+
+    try {
+      setDeletingId(targetKey);
+
+      const params = new URLSearchParams({
+        idRegistro: record.ID_Registro || '',
+        idAlumno: record.ID_Alumno || student.ID_Alumno,
+        cicloEscolar: record.Ciclo_Escolar || '2026-2027',
+        fecha: record.Fecha || '',
+        prueba: record.Prueba || '',
+        resultadoPrincipal: record.Resultado_Principal || '',
+      });
+
+      const res = await fetch(`/api/registros/atletismo?${params.toString()}`, {
+        method: 'DELETE',
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        if (student.ID_Alumno) {
+          await fetchHistorial(student.ID_Alumno);
+        }
+      } else {
+        alert(data.error || 'Error al borrar la prueba');
+      }
+    } catch (err) {
+      console.error('Error al borrar la prueba:', err);
+      alert('Error de red o servidor al borrar la prueba');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -420,18 +462,38 @@ export default function AlumnoPage() {
                     <p className="text-xs text-slate-500 py-4 text-center">No hay registros de atletismo.</p>
                   ) : (
                     <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                      {historial.atletismo.map((r) => (
-                        <div key={r.ID_Registro} className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
-                          <div className="flex items-center justify-between text-xs font-bold text-white">
-                            <span>{r.Prueba}</span>
-                            <span className="text-emerald-400 font-mono text-sm">{r.Resultado_Principal}</span>
+                      {historial.atletismo.map((r, idx) => {
+                        const itemKey = r.ID_Registro || `${r.Prueba}-${r.Fecha}-${idx}`;
+                        const isDeleting = deletingId === itemKey || deletingId === (r.ID_Registro || `${r.Prueba}-${r.Fecha}`);
+                        return (
+                          <div key={itemKey} className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1 group">
+                            <div className="flex items-center justify-between text-xs font-bold text-white">
+                              <span>{r.Prueba}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-emerald-400 font-mono text-sm">{r.Resultado_Principal}</span>
+                                {isTeacherOrAdmin && (
+                                  <button
+                                    onClick={() => handleDeleteAtletismoRecord(r)}
+                                    disabled={isDeleting}
+                                    title="Borrar esta prueba realizada"
+                                    className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 active:scale-95 transition-all"
+                                  >
+                                    {isDeleting ? (
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
+                                    ) : (
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between text-[11px] text-slate-400">
+                              <span>Fecha: {r.Fecha}</span>
+                              <span className="font-mono text-slate-500">Puntos: {r.Puntos || 90}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center justify-between text-[11px] text-slate-400">
-                            <span>Fecha: {r.Fecha}</span>
-                            <span className="font-mono text-slate-500">Puntos: {r.Puntos || 90}</span>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

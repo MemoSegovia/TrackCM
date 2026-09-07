@@ -307,6 +307,106 @@ export async function addRegistroAtletismo(data: RegistroAtletismo): Promise<boo
   }
 }
 
+export async function deleteRegistroAtletismo(
+  idRegistro?: string,
+  idAlumno?: string,
+  fecha?: string,
+  prueba?: string,
+  resultadoPrincipal?: string
+): Promise<boolean> {
+  const client = getGoogleSheetsClient();
+
+  if (!client) {
+    const idx = MOCK_ATLETISMO.findIndex(
+      (r) =>
+        (idRegistro && r.ID_Registro === idRegistro) ||
+        (r.ID_Alumno === idAlumno &&
+          (!fecha || r.Fecha === fecha) &&
+          r.Prueba === prueba &&
+          r.Resultado_Principal === resultadoPrincipal)
+    );
+    if (idx !== -1) {
+      MOCK_ATLETISMO.splice(idx, 1);
+    }
+    return true;
+  }
+
+  try {
+    const meta = await client.sheets.spreadsheets.get({
+      spreadsheetId: client.spreadsheetId,
+    });
+    const sheet = meta.data.sheets?.find(
+      (s) => s.properties?.title === 'Registros_Atletismo'
+    );
+    const sheetId = sheet?.properties?.sheetId;
+
+    const res = await client.sheets.spreadsheets.values.get({
+      spreadsheetId: client.spreadsheetId,
+      range: 'Registros_Atletismo!A2:Z',
+    });
+
+    const rows = res.data.values || [];
+    let targetRowIndex = -1;
+
+    if (idRegistro && idRegistro.trim() !== '') {
+      targetRowIndex = rows.findIndex((r) => r[0] && r[0].trim() === idRegistro.trim());
+    }
+
+    if (targetRowIndex === -1 && (idAlumno || prueba)) {
+      targetRowIndex = rows.findIndex((r) => {
+        const isNewSchema = r.length >= 11;
+        const rowIdAlumno = r[2] || '';
+        const rowFecha = r[1] || '';
+        const rowPrueba = isNewSchema ? r[7] : r[5] || '';
+        const rowResultado = isNewSchema ? r[8] : r[6] || '';
+
+        const matchAlumno = !idAlumno || rowIdAlumno === idAlumno;
+        const matchFecha = !fecha || rowFecha === fecha;
+        const matchPrueba = !prueba || rowPrueba === prueba;
+        const matchResultado = !resultadoPrincipal || rowResultado === resultadoPrincipal;
+
+        return matchAlumno && matchFecha && matchPrueba && matchResultado;
+      });
+    }
+
+    if (targetRowIndex === -1) {
+      console.warn('Record not found in Registros_Atletismo sheet for deletion:', { idRegistro, idAlumno, prueba });
+      return false;
+    }
+
+    if (sheetId !== undefined) {
+      const startRowIndex = targetRowIndex + 1;
+      const endRowIndex = startRowIndex + 1;
+
+      await client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: client.spreadsheetId,
+        requestBody: {
+          requests: [
+            {
+              deleteDimension: {
+                range: {
+                  sheetId,
+                  dimension: 'ROWS',
+                  startIndex: startRowIndex,
+                  endIndex: endRowIndex,
+                },
+              },
+            },
+          ],
+        },
+      });
+    } else {
+      console.warn('Sheet ID for Registros_Atletismo not found.');
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.error('Error deleting from Registros_Atletismo:', err);
+    return false;
+  }
+}
+
 export async function addRegistroCualitativo(data: RegistroCualitativo): Promise<boolean> {
   const client = getGoogleSheetsClient();
   if (!client) {
