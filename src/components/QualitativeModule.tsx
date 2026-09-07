@@ -91,6 +91,7 @@ export default function QualitativeModule({
             <option value="Resistencia Física General">Resistencia Física General</option>
             <option value="Salto de Cuerda">Salto de Cuerda (Cuerda)</option>
             <option value="Orden y Control">Orden y Control</option>
+            <option value="ABC">ABC</option>
             <option value="ABC Atletismo">ABC Atletismo (ABC)</option>
           </select>
         </div>

@@ -5,9 +5,11 @@ import { Play, Pause, RotateCcw, Flag, Send, Timer, CheckCircle, Users, UserPlus
 import { formatStopwatchTime } from '@/lib/utils';
 import { AlumnoInscrito, UserSession, MultiStudentRunner } from '@/lib/types';
 import { submitRecord } from '@/lib/offlineManager';
+import { getPruebasByNivel, normalizeNivelName } from '@/lib/pruebasNivel';
 
 interface StopwatchModuleProps {
   selectedStudent: AlumnoInscrito | null;
+  selectedNivel?: string;
   cicloEscolar: string;
   user: UserSession | null;
   groupStudents?: AlumnoInscrito[];
@@ -16,13 +18,25 @@ interface StopwatchModuleProps {
 
 export default function StopwatchModule({
   selectedStudent,
+  selectedNivel,
   cicloEscolar,
   user,
   groupStudents,
   onRecordSaved,
 }: StopwatchModuleProps) {
   const [mode, setMode] = useState<'individual' | 'multi'>('individual');
-  const [prueba, setPrueba] = useState<string>('100m Velocidad');
+  
+  const activeNivel = selectedStudent?.Nivel || selectedNivel || '';
+  const normNivel = normalizeNivelName(activeNivel);
+  const availablePruebas = getPruebasByNivel(activeNivel);
+
+  const [prueba, setPrueba] = useState<string>(() => availablePruebas[0]?.value || '75m Velocidad');
+
+  useEffect(() => {
+    if (availablePruebas.length > 0 && !availablePruebas.some((p) => p.value === prueba)) {
+      setPrueba(availablePruebas[0].value);
+    }
+  }, [activeNivel]);
 
   // Single mode stopwatch state
   const [elapsedTime, setElapsedTime] = useState<number>(0);
@@ -370,25 +384,26 @@ export default function StopwatchModule({
 
       {/* Select Prueba */}
       <div>
-        <label className="block text-xs font-bold text-slate-400 mb-1.5 uppercase tracking-wider">
-          Prueba Atletismo / Cancha
-        </label>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+            Prueba Atletismo / Cancha
+          </label>
+          {normNivel !== 'General' && (
+            <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-950/80 border border-emerald-500/30 px-2.5 py-0.5 rounded-full">
+              🎯 Habilitadas para {normNivel}
+            </span>
+          )}
+        </div>
         <select
           value={prueba}
           onChange={(e) => setPrueba(e.target.value)}
           className="w-full bg-slate-950 text-white font-bold text-base rounded-2xl px-4 py-3 border-2 border-slate-800 focus:outline-none focus:border-emerald-500 shadow-inner"
         >
-          <option value="50m Velocidad">50m Velocidad</option>
-          <option value="75m Velocidad">75m Velocidad</option>
-          <option value="100m Velocidad">100m Velocidad</option>
-          <option value="200m Velocidad">200m Velocidad</option>
-          <option value="400m Planos">400m Planos</option>
-          <option value="800m Medio Fondo">800m Medio Fondo</option>
-          <option value="1500m Fondo">1500m Fondo</option>
-          <option value="Pruebas de Resistencia">Pruebas de Resistencia</option>
-          <option value="Salto de Cuerda">Salto de Cuerda (Cuerda)</option>
-          <option value="Orden y Control">Orden y Control</option>
-          <option value="ABC Atletismo">ABC Atletismo (ABC)</option>
+          {availablePruebas.map((p) => (
+            <option key={p.value} value={p.value}>
+              {p.label}
+            </option>
+          ))}
         </select>
       </div>
 

@@ -6,7 +6,12 @@ import { Filter, User, Layers, GraduationCap, Calendar, CheckCircle2, Lock, Wifi
 import { saveStudentsCache, getStudentsCache } from '@/lib/offlineManager';
 
 interface StudentSelectorProps {
-  onSelectStudent: (student: AlumnoInscrito | null, ciclo: string, groupStudents?: AlumnoInscrito[]) => void;
+  onSelectStudent: (
+    student: AlumnoInscrito | null,
+    ciclo: string,
+    groupStudents?: AlumnoInscrito[],
+    selectedNivel?: string
+  ) => void;
   user?: UserSession | null;
   selectedStudentId?: string;
 }
@@ -256,21 +261,21 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
       : null;
 
     if (exists) {
-      onSelectStudent(exists, selectedCiclo, list);
+      onSelectStudent(exists, selectedCiclo, list, selectedNivel);
     } else {
       setSelectedAlumnoId('');
-      onSelectStudent(null, selectedCiclo, list);
+      onSelectStudent(null, selectedCiclo, list, selectedNivel);
     }
   }, [selectedCiclo, selectedNivel, selectedGrado, selectedGrupo, alumnos, isDiegoArmando, isOrlandoCampos]);
 
   const handleStudentChange = (id: string) => {
     setSelectedAlumnoId(id);
     if (!id) {
-      onSelectStudent(null, selectedCiclo, filteredAlumnos);
+      onSelectStudent(null, selectedCiclo, filteredAlumnos, selectedNivel);
       return;
     }
     const st = filteredAlumnos.find((a) => a.ID_Alumno === id) || alumnos.find((a) => a.ID_Alumno === id) || null;
-    onSelectStudent(st, selectedCiclo, filteredAlumnos);
+    onSelectStudent(st, selectedCiclo, filteredAlumnos, selectedNivel);
   };
 
   const selectedStudentObj = selectedAlumnoId

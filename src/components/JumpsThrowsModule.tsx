@@ -156,8 +156,10 @@ export default function JumpsThrowsModule({
             onChange={(e) => setPrueba(e.target.value)}
             className="w-full bg-slate-800 text-white font-medium text-sm rounded-xl px-3 py-2 border border-slate-700 focus:outline-none focus:border-amber-500"
           >
+            <option value="Salto">Salto</option>
             <option value="Salto de Longitud">Salto de Longitud</option>
             <option value="Salto Alto">Salto Alto (Altura)</option>
+            <option value="Lanzamiento">Lanzamiento</option>
             <option value="Lanzamiento de Bala">Lanzamiento de Bala</option>
             <option value="Lanzamiento de Disco">Lanzamiento de Disco</option>
             <option value="Lanzamiento de Jabalina">Lanzamiento de Jabalina</option>
