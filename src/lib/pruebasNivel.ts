@@ -100,3 +100,51 @@ export function getPruebasByNivel(nivelRaw?: string): OptionPrueba[] {
       ];
   }
 }
+
+export function getGradosByNivel(nivelRaw?: string): Array<{ value: string; label: string }> {
+  const norm = normalizeNivelName(nivelRaw);
+
+  switch (norm) {
+    case 'Kinder':
+      return [{ value: '3', label: '3° Grado (K3)' }];
+    case 'Primaria Menor':
+      return [
+        { value: '1', label: '1° Grado' },
+        { value: '2', label: '2° Grado' },
+        { value: '3', label: '3° Grado' },
+      ];
+    case 'Primaria Mayor':
+      return [
+        { value: '4', label: '4° Grado' },
+        { value: '5', label: '5° Grado' },
+        { value: '6', label: '6° Grado' },
+      ];
+    case 'Secundaria':
+      return [
+        { value: '7', label: '7° Grado (1° Sec)' },
+        { value: '8', label: '8° Grado (2° Sec)' },
+        { value: '9', label: '9° Grado (3° Sec)' },
+      ];
+    case 'Preparatoria':
+      return [
+        { value: '10', label: '10° Grado (1° Prep)' },
+        { value: '11', label: '11° Grado (2° Prep)' },
+        { value: '12', label: '12° Grado (3° Prep)' },
+      ];
+    default:
+      return [
+        { value: '1', label: '1° Grado' },
+        { value: '2', label: '2° Grado' },
+        { value: '3', label: '3° Grado' },
+        { value: '4', label: '4° Grado' },
+        { value: '5', label: '5° Grado' },
+        { value: '6', label: '6° Grado' },
+        { value: '7', label: '7° Grado' },
+        { value: '8', label: '8° Grado' },
+        { value: '9', label: '9° Grado' },
+        { value: '10', label: '10° Grado' },
+        { value: '11', label: '11° Grado' },
+        { value: '12', label: '12° Grado' },
+      ];
+  }
+}
