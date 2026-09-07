@@ -80,7 +80,7 @@ export async function GET(request: Request) {
       return true;
     });
 
-    const targetStudentIds = new Set(targetStudents.map((s) => s.ID_Alumno));
+    const targetStudentsSet = new Set(targetStudents);
     const isFilteredByGroup = nivel !== 'Todos' || grado !== 'Todos' || grupo !== 'Todos';
 
     // Determine target test list
@@ -119,7 +119,7 @@ export async function GET(request: Request) {
         const st = getStudentForRecord(r);
         if (!st) return false;
 
-        if (isFilteredByGroup && !targetStudentIds.has(st.ID_Alumno)) return false;
+        if (isFilteredByGroup && !targetStudentsSet.has(st)) return false;
 
         const pName = (r.Prueba || '').toLowerCase().trim();
 
@@ -161,7 +161,7 @@ export async function GET(request: Request) {
         ? registrosCual.filter((r) => {
             const st = getStudentForRecord(r);
             if (!st) return false;
-            if (isFilteredByGroup && !targetStudentIds.has(st.ID_Alumno)) return false;
+            if (isFilteredByGroup && !targetStudentsSet.has(st)) return false;
 
             const pName = (r.Deporte_o_Prueba || '').toLowerCase().trim();
             if (cleanTestName.includes('cuerda') && pName.includes('cuerda')) return true;
@@ -183,24 +183,25 @@ export async function GET(request: Request) {
         cleanTestName.includes('velocidad') ||
         cleanTestName.includes('resistencia');
 
-      // Best mark map per student
+      // Best mark map per student (keyed by normalized full name for absolute uniqueness)
       const studentBestMap = new Map<string, { student: typeof alumnos[0]; result: string; numericVal: number; fecha: string }>();
 
       testAtlRecords.forEach((r) => {
         const st = getStudentForRecord(r);
         if (!st) return;
 
+        const stKey = st.Nombre_Completo.trim().toLowerCase();
         const numVal = isTimeTest
           ? parseSecondsFromFormattedTime(r.Resultado_Principal)
           : parseDistanceInMeters(r.Resultado_Principal);
 
-        const current = studentBestMap.get(st.ID_Alumno);
+        const current = studentBestMap.get(stKey);
         if (!current) {
-          studentBestMap.set(st.ID_Alumno, { student: st, result: r.Resultado_Principal, numericVal: numVal, fecha: r.Fecha || '' });
+          studentBestMap.set(stKey, { student: st, result: r.Resultado_Principal, numericVal: numVal, fecha: r.Fecha || '' });
         } else {
           const isBetter = isTimeTest ? numVal < current.numericVal : numVal > current.numericVal;
           if (isBetter) {
-            studentBestMap.set(st.ID_Alumno, { student: st, result: r.Resultado_Principal, numericVal: numVal, fecha: r.Fecha || '' });
+            studentBestMap.set(stKey, { student: st, result: r.Resultado_Principal, numericVal: numVal, fecha: r.Fecha || '' });
           }
         }
       });
@@ -208,8 +209,9 @@ export async function GET(request: Request) {
       testCualRecords.forEach((r) => {
         const st = getStudentForRecord(r);
         if (!st) return;
-        if (!studentBestMap.has(st.ID_Alumno)) {
-          studentBestMap.set(st.ID_Alumno, { student: st, result: r.Calificacion, numericVal: 1, fecha: r.Fecha || '' });
+        const stKey = st.Nombre_Completo.trim().toLowerCase();
+        if (!studentBestMap.has(stKey)) {
+          studentBestMap.set(stKey, { student: st, result: r.Calificacion, numericVal: 1, fecha: r.Fecha || '' });
         }
       });
 
@@ -254,8 +256,8 @@ export async function GET(request: Request) {
           });
         });
 
-        const studentWithMarkIds = new Set(rankedWithMarks.map((item) => item.student.ID_Alumno));
-        const studentsWithoutMarks = targetStudents.filter((st) => !studentWithMarkIds.has(st.ID_Alumno));
+        const studentWithMarkNames = new Set(rankedWithMarks.map((item) => item.student.Nombre_Completo.trim().toLowerCase()));
+        const studentsWithoutMarks = targetStudents.filter((st) => !studentWithMarkNames.has(st.Nombre_Completo.trim().toLowerCase()));
 
         studentsWithoutMarks.forEach((st) => {
           resultList.push({

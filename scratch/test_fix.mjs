@@ -52,32 +52,66 @@ function getStudentForRecord(r, allAlumnos) {
   return null;
 }
 
-async function testFix() {
+async function testGroupFilter() {
   const alumnos = await getAlumnosInscritos();
   const registrosAtl = await getRegistrosAtletismo();
 
-  const targetNivel = 'Primaria Menor';
-  const normTargetNivel = normalizeNivel(targetNivel);
+  const nivel = 'Primaria Mayor';
+  const grado = '6';
+  const grupo = 'B';
 
-  const matched = [];
+  const targetStudents = alumnos.filter((a) => {
+    const studentNivel = getStudentNivelNormalized(a);
+    const targetNivel = normalizeNivel(nivel);
+    if (studentNivel !== targetNivel) return false;
+
+    const cleanStudentGrado = (a.Grado || '').replace(/[^0-9]/g, '');
+    if (cleanStudentGrado !== grado) return false;
+
+    const cleanStudentGrupo = (a.Grupo || '').trim().toUpperCase();
+    if (cleanStudentGrupo !== grupo) return false;
+
+    return true;
+  });
+
+  console.log(`Target students for ${nivel} ${grado}° "${grupo}":`, targetStudents.length);
+  console.log('Target student names:', targetStudents.map(s => s.Nombre_Completo));
+
+  const targetStudentsSet = new Set(targetStudents);
+
+  const matchedOldBug = [];
+  const matchedFixed = [];
+
+  const targetStudentIdsOld = new Set(targetStudents.map(s => s.ID_Alumno));
+
   registrosAtl.forEach((r) => {
     const st = getStudentForRecord(r, alumnos);
     if (!st) return;
 
-    const stNivel = getStudentNivelNormalized(st);
-    if (stNivel === normTargetNivel && r.Prueba.includes('75m')) {
-      matched.push({
+    // OLD BUG:
+    if (targetStudentIdsOld.has(st.ID_Alumno)) {
+      matchedOldBug.push({
         recordName: r.Nombre_Alumno,
-        studentName: st.Nombre_Completo,
-        studentNivel: st.Nivel,
-        studentGrado: st.Grado,
-        resultado: r.Resultado_Principal,
+        studentMatchedName: st.Nombre_Completo,
+        studentMatchedGroup: `${st.Nivel} - ${st.Grado} ${st.Grupo}`,
+      });
+    }
+
+    // FIXED:
+    if (targetStudentsSet.has(st)) {
+      matchedFixed.push({
+        recordName: r.Nombre_Alumno,
+        studentMatchedName: st.Nombre_Completo,
+        studentMatchedGroup: `${st.Nivel} - ${st.Grado} ${st.Grupo}`,
       });
     }
   });
 
-  console.log(`Matched 75m Velocidad records for ${targetNivel} (Total: ${matched.length}):`);
-  console.log(matched);
+  console.log('\n--- OLD BUG MATCHES ---');
+  console.log(matchedOldBug.slice(0, 10));
+
+  console.log('\n--- FIXED MATCHES ---');
+  console.log(matchedFixed);
 }
 
-testFix().catch(console.error);
+testGroupFilter().catch(console.error);
