@@ -18,6 +18,11 @@ export const metadata: Metadata = {
   description:
     'Sistema integral de registro antropométrico, pruebas de atletismo y evaluaciones cualitativas del Colegio Mexicano.',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/favicon.png',
+    shortcut: '/favicon.png',
+    apple: '/icon.png',
+  },
   keywords: [
     'TrackCM',
     'Colegio Mexicano',
