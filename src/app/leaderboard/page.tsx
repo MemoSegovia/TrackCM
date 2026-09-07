@@ -36,12 +36,16 @@ export default function LeaderboardPage() {
     }
   }, []);
 
-  // When nivel changes, reset grade if invalid for new level
+  // When nivel changes, reset grade and test if invalid for new level
   const handleNivelChange = (newNivel: string) => {
     setNivel(newNivel);
     const validGrados = getGradosByNivel(newNivel);
     if (grado !== 'Todos' && !validGrados.some((g) => g.value === grado)) {
       setGrado('Todos');
+    }
+    const validPruebas = getPruebasByNivel(newNivel);
+    if (prueba !== 'Todas' && !validPruebas.some((p) => p.value === prueba)) {
+      setPrueba('Todas');
     }
   };
 
