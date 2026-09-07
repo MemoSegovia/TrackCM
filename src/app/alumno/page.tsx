@@ -201,7 +201,7 @@ export default function AlumnoPage() {
               </h1>
               <p className="text-xs text-slate-400">
                 {isTeacherOrAdmin
-                  ? 'Filtra por Nivel, Grado y Grupo para seleccionar un alumno o busca por nombre/ID'
+                  ? 'Filtra por Nivel, Grado y Grupo para seleccionar y consultar a un alumno'
                   : user
                   ? `Registros pertenecientes a ${user.nombre}`
                   : 'Consulta de expediente de educación física'}
@@ -229,29 +229,6 @@ export default function AlumnoPage() {
                 selectedStudentId={student?.ID_Alumno}
                 onSelectStudent={handleStudentSelectedFromSelector}
               />
-
-              {/* Alternative Manual Search Bar */}
-              <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-3">
-                <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-2">
-                  <div className="relative flex-1">
-                    <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3" />
-                    <input
-                      type="text"
-                      placeholder="Búsqueda rápida por nombre exacto, ID o correo..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full bg-slate-900 text-slate-100 text-xs rounded-xl pl-9 pr-3 py-2.5 border border-slate-700 focus:outline-none focus:border-cyan-500"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="px-4 py-2.5 rounded-xl font-bold text-xs bg-cyan-500 hover:bg-cyan-600 text-slate-950 transition-all shadow-md shadow-cyan-500/20 flex items-center justify-center gap-1.5"
-                  >
-                    {loading ? 'Buscando...' : 'Buscar Manual'}
-                  </button>
-                </form>
-              </div>
             </div>
           )}
 
@@ -263,17 +240,15 @@ export default function AlumnoPage() {
             </div>
           )}
 
-          {/* Teacher/Admin initial state before search */}
+          {/* Teacher/Admin initial state before student selection */}
           {!loading && isTeacherOrAdmin && !student && (
             <div className="bg-slate-950 border border-slate-800 rounded-2xl p-10 text-center space-y-3 my-4">
               <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-400 mx-auto flex items-center justify-center font-bold">
-                <Search className="w-6 h-6" />
+                <Activity className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white">Búsqueda de Historial de Alumnos</h3>
+              <h3 className="text-lg font-bold text-white">Selección de Alumno</h3>
               <p className="text-xs text-slate-400 max-w-md mx-auto">
-                {searched
-                  ? 'No se encontró ningún estudiante con ese nombre, ID o correo.'
-                  : 'Como Maestro o Administrador, escribe el nombre del alumno en la barra de búsqueda superior para consultar sus marcas de atletismo, avances de IMC y evaluaciones.'}
+                Utiliza los selectores superiores (Ciclo, Nivel Escolar, Grado, Grupo y Alumno) para desplegar el historial completo del estudiante.
               </p>
             </div>
           )}
