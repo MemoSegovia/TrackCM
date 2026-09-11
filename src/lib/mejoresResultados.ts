@@ -79,17 +79,39 @@ export interface StudentBestMarksRow {
   abc: string;
 }
 
+function normalizeTokens(nameStr?: string): Set<string> {
+  if (!nameStr) return new Set();
+  return new Set(
+    nameStr
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/,/g, ' ')
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter((t) => t.length > 1)
+  );
+}
+
 function matchesStudent(record: { ID_Alumno?: string; Nombre_Alumno?: string }, student: AlumnoInscrito): boolean {
   if (!record) return false;
-  const recName = (record.Nombre_Alumno || '').trim().toLowerCase().replace(/\s+/g, ' ');
-  const stName = (student.Nombre_Completo || '').trim().toLowerCase().replace(/\s+/g, ' ');
 
-  if (recName && stName && recName === stName) {
+  if (record.ID_Alumno && student.ID_Alumno && String(record.ID_Alumno).trim() === String(student.ID_Alumno).trim()) {
     return true;
   }
 
-  if (record.ID_Alumno && student.ID_Alumno && record.ID_Alumno === student.ID_Alumno) {
-    if (!recName || recName === stName) return true;
+  const recTokens = normalizeTokens(record.Nombre_Alumno);
+  const stTokens = normalizeTokens(student.Nombre_Completo);
+
+  if (recTokens.size > 0 && stTokens.size > 0) {
+    let overlap = 0;
+    recTokens.forEach((t) => {
+      if (stTokens.has(t)) overlap++;
+    });
+    const minTokens = Math.min(recTokens.size, stTokens.size);
+    if (overlap >= 2 && overlap >= minTokens - 1) {
+      return true;
+    }
   }
 
   return false;
