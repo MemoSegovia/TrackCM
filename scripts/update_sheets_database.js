@@ -30,7 +30,7 @@ async function apiCallWithRetry(fn, maxRetries = 8) {
       if (is429) {
         attempt++;
         if (attempt > maxRetries) throw err;
-        const waitTime = Math.min(attempt * 8, 30);
+        const waitTime = Math.min(attempt * 10, 40);
         console.warn(`⏳ [Rate Limit 429] Waiting ${waitTime}s before retry (attempt ${attempt}/${maxRetries})...`);
         await sleep(waitTime * 1000);
       } else {
@@ -188,21 +188,39 @@ function formatGender(genero) {
   return 'M';
 }
 
+function normalizeTokens(nameStr) {
+  if (!nameStr) return new Set();
+  return new Set(
+    nameStr
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/,/g, ' ')
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter(t => t.length > 1)
+  );
+}
+
 function matchesStudent(record, student) {
   if (!record) return false;
-  const recName = (record.Nombre_Alumno || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase().replace(/\s+/g, ' ');
-  const stName = (student.Nombre_Completo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase().replace(/\s+/g, ' ');
 
-  if (recName && stName) {
-    if (recName === stName) return true;
-    const recTokens = recName.replace(',', '').split(/\s+/);
-    const stTokens = stName.replace(',', '').split(/\s+/);
-    const overlap = recTokens.filter(t => stTokens.includes(t)).length;
-    if (overlap >= 2 && overlap >= stTokens.length - 1) return true;
+  if (record.ID_Alumno && student.ID_Alumno && String(record.ID_Alumno).trim() === String(student.ID_Alumno).trim()) {
+    return true;
   }
 
-  if (record.ID_Alumno && student.ID_Alumno && record.ID_Alumno === student.ID_Alumno) {
-    return true;
+  const recTokens = normalizeTokens(record.Nombre_Alumno);
+  const stTokens = normalizeTokens(student.Nombre_Completo);
+
+  if (recTokens.size > 0 && stTokens.size > 0) {
+    let overlap = 0;
+    recTokens.forEach((t) => {
+      if (stTokens.has(t)) overlap++;
+    });
+    const minTokens = Math.min(recTokens.size, stTokens.size);
+    if (overlap >= 2 && overlap >= minTokens - 1) {
+      return true;
+    }
   }
 
   return false;
@@ -480,8 +498,6 @@ async function updateAllSheets() {
         Ciclo_Escolar: '2026-2027',
       });
       addedCount++;
-    } else {
-      console.log(`[ADDITION] Student already exists, skipping duplicate add: "${st.nombre}"`);
     }
   });
 
@@ -545,35 +561,29 @@ async function updateAllSheets() {
   await sleep(1500);
 
   // 6. Update SPREADSHEET_ID_MEJORES_RESULTADOS tabs
-  const atletismo = (resAtl.data.values || []).map((r) => {
-    const isNew = r.length >= 11;
-    return {
-      ID_Registro: r[0] || '',
-      Fecha: r[1] || '',
-      ID_Alumno: r[2] || '',
-      Nombre_Alumno: isNew ? r[3] : '',
-      Ciclo_Escolar: isNew ? r[4] : r[3] || '',
-      ID_Maestro: isNew ? r[5] : r[4] || '',
-      Nombre_Maestro: isNew ? r[6] : '',
-      Prueba: isNew ? r[7] : r[5] || '',
-      Resultado_Principal: isNew ? r[8] : r[6] || '',
-    };
-  });
+  const atletismo = (resAtl.data.values || []).map((r) => ({
+    ID_Registro: r[0] || '',
+    Fecha: r[1] || '',
+    ID_Alumno: r[2] || '',
+    Nombre_Alumno: r[3] || '',
+    Ciclo_Escolar: r[4] || '',
+    ID_Maestro: r[5] || '',
+    Nombre_Maestro: r[6] || '',
+    Prueba: r[7] || r[5] || '',
+    Resultado_Principal: r[8] || r[6] || '',
+  }));
 
-  const cualitativo = (resCual.data.values || []).map((r) => {
-    const isNew = r.length >= 9;
-    return {
-      ID_Registro: r[0] || '',
-      Fecha: r[1] || '',
-      ID_Alumno: r[2] || '',
-      Nombre_Alumno: isNew ? r[3] : '',
-      Ciclo_Escolar: isNew ? r[4] : r[3] || '',
-      ID_Maestro: isNew ? r[5] : r[4] || '',
-      Nombre_Maestro: isNew ? r[6] : '',
-      Deporte_o_Prueba: isNew ? r[7] : r[5] || '',
-      Calificacion: isNew ? r[8] : r[6] || '',
-    };
-  });
+  const cualitativo = (resCual.data.values || []).map((r) => ({
+    ID_Registro: r[0] || '',
+    Fecha: r[1] || '',
+    ID_Alumno: r[2] || '',
+    Nombre_Alumno: r[3] || '',
+    Ciclo_Escolar: r[4] || '',
+    ID_Maestro: r[5] || '',
+    Nombre_Maestro: r[6] || '',
+    Deporte_o_Prueba: r[7] || r[5] || '',
+    Calificacion: r[8] || r[6] || '',
+  }));
 
   const cicloEscolar = '2026-2027';
   const metaMej = await apiCallWithRetry(() => sheets.spreadsheets.get({ spreadsheetId: mejoesSpreadsheetId }));
@@ -641,7 +651,7 @@ async function updateAllSheets() {
     await sleep(1500); // 1.5s delay to stay comfortably under API rate limits
   }
 
-  console.log('\n🎉 ALL GOOGLE SHEETS TABS UPDATED SUCCESSFULLY!');
+  console.log('\n🎉 ALL GOOGLE SHEETS TABS UPDATED SUCCESSFULLY WITH HISTORICAL MARKS!');
 }
 
 updateAllSheets().catch((err) => {
