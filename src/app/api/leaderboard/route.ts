@@ -34,6 +34,7 @@ export async function GET(request: Request) {
     const nivel = searchParams.get('nivel') || 'Todos';
     const grado = searchParams.get('grado') || 'Todos';
     const grupo = searchParams.get('grupo') || 'Todos';
+    const rama = searchParams.get('rama') || searchParams.get('genero') || 'Mixto';
     const pruebaParam = searchParams.get('prueba') || 'Todas';
 
     const [alumnos, registrosAtl, registrosCual] = await Promise.all([
@@ -58,7 +59,7 @@ export async function GET(request: Request) {
       return null;
     };
 
-    // 1. Filter students according to Nivel, Grado, Grupo
+    // 1. Filter students according to Nivel, Grado, Grupo, Rama/Genero
     const targetStudents = alumnos.filter((a) => {
       if (nivel !== 'Todos') {
         const studentNivel = getStudentNivelNormalized(a);
@@ -77,11 +78,18 @@ export async function GET(request: Request) {
         if (cleanStudentGrupo !== grupo.trim().toUpperCase()) return false;
       }
 
+      if (rama !== 'Mixto' && rama !== 'Todos') {
+        const g = (a.Genero || '').trim().toUpperCase();
+        const isFemale = g === 'F' || g === 'FEMENINO' || g === 'MUJER' || g === 'FEMENIL';
+        if (rama === 'Varonil' && isFemale) return false;
+        if (rama === 'Femenil' && !isFemale) return false;
+      }
+
       return true;
     });
 
     const targetStudentsSet = new Set(targetStudents);
-    const isFilteredByGroup = nivel !== 'Todos' || grado !== 'Todos' || grupo !== 'Todos';
+    const isFilteredByGroup = nivel !== 'Todos' || grado !== 'Todos' || grupo !== 'Todos' || rama !== 'Mixto';
 
     // Determine target test list
     let targetPruebas: string[] = [];
@@ -228,6 +236,7 @@ export async function GET(request: Request) {
           idRegistro: item.student.ID_Alumno + '_' + index,
           idAlumno: item.student.ID_Alumno,
           nombreAlumno: item.student.Nombre_Completo,
+          genero: item.student.Genero,
           nivel: item.student.Nivel,
           grado: item.student.Grado,
           grupo: item.student.Grupo,
@@ -239,7 +248,7 @@ export async function GET(request: Request) {
           leaderboards[testName] = top3;
         }
       } else {
-        // Mode B: Specific Nivel, Grado, or Grupo selected -> Return ALL students of that group/grade ordered best to worst
+        // Mode B: Specific Nivel, Grado, Grupo, or Rama selected -> Return ALL students of that group/grade/rama ordered best to worst
         const resultList: Array<any> = [];
 
         rankedWithMarks.forEach((item, index) => {
@@ -248,6 +257,7 @@ export async function GET(request: Request) {
             idRegistro: item.student.ID_Alumno,
             idAlumno: item.student.ID_Alumno,
             nombreAlumno: item.student.Nombre_Completo,
+            genero: item.student.Genero,
             nivel: item.student.Nivel,
             grado: item.student.Grado,
             grupo: item.student.Grupo,
@@ -265,6 +275,7 @@ export async function GET(request: Request) {
             idRegistro: st.ID_Alumno,
             idAlumno: st.ID_Alumno,
             nombreAlumno: st.Nombre_Completo,
+            genero: st.Genero,
             nivel: st.Nivel,
             grado: st.Grado,
             grupo: st.Grupo,

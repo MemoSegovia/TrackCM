@@ -13,6 +13,7 @@ export default function LeaderboardPage() {
   const [nivel, setNivel] = useState<string>('Todos');
   const [grado, setGrado] = useState<string>('Todos');
   const [grupo, setGrupo] = useState<string>('Todos');
+  const [rama, setRama] = useState<string>('Mixto');
   const [prueba, setPrueba] = useState<string>('Todas');
 
   const [leaderboards, setLeaderboards] = useState<Record<string, Array<any>>>({});
@@ -36,6 +37,14 @@ export default function LeaderboardPage() {
     }
   }, []);
 
+  const getGenderLabel = (genero?: string): string => {
+    if (!genero) return '';
+    const g = genero.trim().toUpperCase();
+    if (g === 'F' || g === 'FEMENINO' || g === 'MUJER' || g === 'FEMENIL') return 'Femenil';
+    if (g === 'M' || g === 'H' || g === 'MASCULINO' || g === 'VARONIL' || g === 'HOMBRE') return 'Varonil';
+    return genero;
+  };
+
   // When nivel changes, reset grade and test if invalid for new level
   const handleNivelChange = (newNivel: string) => {
     setNivel(newNivel);
@@ -56,6 +65,7 @@ export default function LeaderboardPage() {
       if (nivel !== 'Todos') params.append('nivel', nivel);
       if (grado !== 'Todos') params.append('grado', grado);
       if (grupo !== 'Todos') params.append('grupo', grupo);
+      if (rama !== 'Mixto') params.append('rama', rama);
       if (prueba !== 'Todas') params.append('prueba', prueba);
 
       const res = await fetch(`/api/leaderboard?${params.toString()}`);
@@ -82,9 +92,9 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     loadLeaderboards();
-  }, [nivel, grado, grupo, prueba]);
+  }, [nivel, grado, grupo, rama, prueba]);
 
-  const isFilteredGroup = nivel !== 'Todos' || grado !== 'Todos' || grupo !== 'Todos';
+  const isFilteredGroup = nivel !== 'Todos' || grado !== 'Todos' || grupo !== 'Todos' || rama !== 'Mixto';
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
@@ -99,7 +109,7 @@ export default function LeaderboardPage() {
               <h1 className="text-2xl font-black text-white">Leaderboards & Tablas de Posiciones</h1>
             </div>
             <p className="text-xs text-slate-400">
-              Colegio Mexicano • Ranking por Nivel, Grado, Grupo y Prueba Deportiva
+              Colegio Mexicano • Ranking por Nivel, Grado, Grupo, Rama y Prueba Deportiva
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -174,6 +184,20 @@ export default function LeaderboardPage() {
               </select>
             </div>
 
+            {/* Rama / Género */}
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase mb-0.5">Rama</label>
+              <select
+                value={rama}
+                onChange={(e) => setRama(e.target.value)}
+                className="bg-slate-950 text-xs font-semibold text-sky-300 rounded-xl px-3 py-2 border border-slate-800 focus:outline-none focus:border-amber-400 font-bold"
+              >
+                <option value="Mixto">Mixto</option>
+                <option value="Varonil">Varonil</option>
+                <option value="Femenil">Femenil</option>
+              </select>
+            </div>
+
             {/* Resultado por Prueba */}
             <div>
               <label className="block text-[10px] font-bold text-slate-400 uppercase mb-0.5">Prueba</label>
@@ -215,7 +239,9 @@ export default function LeaderboardPage() {
                     <h3 className="text-base font-extrabold text-white">{pruebaName}</h3>
                   </div>
                   <span className="text-[10px] font-mono font-extrabold px-2.5 py-0.5 rounded bg-slate-800 text-amber-400 border border-slate-700">
-                    {isFilteredGroup ? `RANKING GRUPO (${studentList.length} ALUMNOS)` : 'TOP 3 GENERAL'}
+                    {isFilteredGroup
+                      ? `RANKING ${rama !== 'Mixto' ? rama.toUpperCase() : 'GRUPO'} (${studentList.length} ALUMNOS)`
+                      : 'TOP 3 GENERAL'}
                   </span>
                 </div>
 
@@ -261,7 +287,7 @@ export default function LeaderboardPage() {
                                 {item.nombreAlumno}
                               </p>
                               <p className="text-xs text-slate-400">
-                                {item.nivel} • {item.grado}° "{item.grupo}" {item.fecha ? `| ${item.fecha}` : ''}
+                                {item.nivel} • {item.grado}° "{item.grupo}" {item.genero ? `• ${getGenderLabel(item.genero)}` : ''} {item.fecha ? `| ${item.fecha}` : ''}
                               </p>
                             </div>
                           </div>
