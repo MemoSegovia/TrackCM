@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getAlumnosInscritos, getRegistrosAtletismo, getRegistrosCualitativos } from '@/lib/googleSheets';
+import {
+  getAlumnosInscritos,
+  getRegistrosAtletismo,
+  getRegistrosCualitativos,
+  getGroupTabsRecordsBatch,
+  GroupTabMarkRecord,
+} from '@/lib/googleSheets';
 import { parseSecondsFromFormattedTime, parseDistanceInMeters } from '@/lib/utils';
 import { getPruebasByNivel } from '@/lib/pruebasNivel';
+import { AlumnoInscrito } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +35,45 @@ function getStudentNivelNormalized(a: { Nivel?: string; Grado?: string }): strin
   return norm;
 }
 
+function normalizeTokens(nameStr?: string): Set<string> {
+  if (!nameStr) return new Set();
+  return new Set(
+    nameStr
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/,/g, ' ')
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter((t) => t.length > 1)
+  );
+}
+
+function matchesStudent(
+  record: { ID_Alumno?: string; Nombre_Alumno?: string; nombreAlumno?: string },
+  student: AlumnoInscrito
+): boolean {
+  if (!record || !student) return false;
+  if (record.ID_Alumno && student.ID_Alumno && String(record.ID_Alumno).trim() === String(student.ID_Alumno).trim()) {
+    return true;
+  }
+  const recName = record.Nombre_Alumno || record.nombreAlumno || '';
+  const recTokens = normalizeTokens(recName);
+  const stTokens = normalizeTokens(student.Nombre_Completo);
+
+  if (recTokens.size > 0 && stTokens.size > 0) {
+    let overlap = 0;
+    recTokens.forEach((t) => {
+      if (stTokens.has(t)) overlap++;
+    });
+    const minTokens = Math.min(recTokens.size, stTokens.size);
+    if (overlap >= 2 && overlap >= minTokens - 1) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -37,26 +83,21 @@ export async function GET(request: Request) {
     const rama = searchParams.get('rama') || searchParams.get('genero') || 'Mixto';
     const pruebaParam = searchParams.get('prueba') || 'Todas';
 
-    const [alumnos, registrosAtl, registrosCual] = await Promise.all([
+    const [alumnos, registrosAtl, registrosCual, groupTabRecords] = await Promise.all([
       getAlumnosInscritos(),
       getRegistrosAtletismo(),
       getRegistrosCualitativos(),
+      getGroupTabsRecordsBatch(),
     ]);
 
-    // Helper to resolve student by full name match first, then fallback to ID
-    const getStudentForRecord = (r: { ID_Alumno?: string; Nombre_Alumno?: string }): typeof alumnos[0] | null => {
-      const recName = (r.Nombre_Alumno || '').trim().toLowerCase().replace(/\s+/g, ' ');
-      if (recName) {
-        const foundByName = alumnos.find(
-          (a) => (a.Nombre_Completo || '').trim().toLowerCase().replace(/\s+/g, ' ') === recName
-        );
-        if (foundByName) return foundByName;
-      }
-      if (r.ID_Alumno) {
-        const foundById = alumnos.find((a) => a.ID_Alumno === r.ID_Alumno);
-        if (foundById) return foundById;
-      }
-      return null;
+    // Cache student lookup helper
+    const studentMatchCache = new Map<string, AlumnoInscrito | null>();
+    const getStudentForRecord = (r: { ID_Alumno?: string; Nombre_Alumno?: string; nombreAlumno?: string }): AlumnoInscrito | null => {
+      const key = `${r.ID_Alumno || ''}_${r.Nombre_Alumno || r.nombreAlumno || ''}`;
+      if (studentMatchCache.has(key)) return studentMatchCache.get(key)!;
+      const found = alumnos.find((a) => matchesStudent(r, a));
+      studentMatchCache.set(key, found || null);
+      return found || null;
     };
 
     // 1. Filter students according to Nivel, Grado, Grupo, Rama/Genero
@@ -89,7 +130,7 @@ export async function GET(request: Request) {
     });
 
     const targetStudentsSet = new Set(targetStudents);
-    const isFilteredByGroup = nivel !== 'Todos' || grado !== 'Todos' || grupo !== 'Todos' || rama !== 'Mixto';
+    const isFilteredGroup = nivel !== 'Todos' || grado !== 'Todos' || grupo !== 'Todos' || rama !== 'Mixto';
 
     // Determine target test list
     let targetPruebas: string[] = [];
@@ -120,66 +161,6 @@ export async function GET(request: Request) {
     for (const testName of targetPruebas) {
       const cleanTestName = testName.toLowerCase().trim();
 
-      // Find athletic records for this test
-      const testAtlRecords = registrosAtl.filter((r) => {
-        if (r.Resultado_Principal === 'No Completada') return false;
-
-        const st = getStudentForRecord(r);
-        if (!st) return false;
-
-        if (isFilteredByGroup && !targetStudentsSet.has(st)) return false;
-
-        const pName = (r.Prueba || '').toLowerCase().trim();
-
-        if (cleanTestName.includes('50m') && pName.includes('50m')) return true;
-        if (cleanTestName.includes('75m') && pName.includes('75m')) return true;
-        if (cleanTestName.includes('100m') && pName.includes('100m')) return true;
-        if (cleanTestName.includes('200m') && pName.includes('200m')) return true;
-        if (cleanTestName.includes('400m') && pName.includes('400m')) return true;
-        if (cleanTestName.includes('600m') && pName.includes('600m')) return true;
-        if (cleanTestName.includes('800m') && pName.includes('800m')) return true;
-
-        if (
-          cleanTestName.includes('resistencia') &&
-          pName.includes('resistencia') &&
-          !pName.includes('200m') &&
-          !pName.includes('400m') &&
-          !pName.includes('600m') &&
-          !pName.includes('800m')
-        ) {
-          const stNivel = getStudentNivelNormalized(st);
-          const stGrado = (st.Grado || '').replace(/[^0-9]/g, '');
-          if (cleanTestName.includes('200m') && (stNivel === 'kinder' || (stNivel === 'primaria menor' && (stGrado === '1' || stGrado === '2')))) return true;
-          if (cleanTestName.includes('400m') && ((stNivel === 'primaria menor' && stGrado === '3') || (stNivel === 'primaria mayor' && stGrado === '4'))) return true;
-          if (cleanTestName.includes('600m') && stNivel === 'primaria mayor' && (stGrado === '5' || stGrado === '6')) return true;
-          if (cleanTestName.includes('800m') && (stNivel === 'secundaria' || stNivel === 'preparatoria')) return true;
-        }
-
-        if (cleanTestName === 'salto' && pName.includes('salto') && !pName.includes('cuerda')) return true;
-        if (cleanTestName === 'lanzamiento' && pName.includes('lanzamiento')) return true;
-        if (cleanTestName.includes('cuerda') && pName.includes('cuerda')) return true;
-        if (cleanTestName.includes('orden') && pName.includes('orden')) return true;
-        if (cleanTestName.includes('abc') && pName.includes('abc')) return true;
-
-        return pName === cleanTestName;
-      });
-
-      // Find qualitative records if applicable
-      const testCualRecords = (cleanTestName.includes('cuerda') || cleanTestName.includes('orden') || cleanTestName.includes('abc'))
-        ? registrosCual.filter((r) => {
-            const st = getStudentForRecord(r);
-            if (!st) return false;
-            if (isFilteredByGroup && !targetStudentsSet.has(st)) return false;
-
-            const pName = (r.Deporte_o_Prueba || '').toLowerCase().trim();
-            if (cleanTestName.includes('cuerda') && pName.includes('cuerda')) return true;
-            if (cleanTestName.includes('orden') && pName.includes('orden')) return true;
-            if (cleanTestName.includes('abc') && pName.includes('abc')) return true;
-            return false;
-          })
-        : [];
-
-      // Is time test (lower time is better)?
       const isTimeTest =
         cleanTestName.includes('50m') ||
         cleanTestName.includes('75m') ||
@@ -191,46 +172,117 @@ export async function GET(request: Request) {
         cleanTestName.includes('velocidad') ||
         cleanTestName.includes('resistencia');
 
-      // Best mark map per student (keyed by normalized full name for absolute uniqueness)
-      const studentBestMap = new Map<string, { student: typeof alumnos[0]; result: string; numericVal: number; fecha: string }>();
+      const isDistanceTest = cleanTestName.includes('salto') || cleanTestName.includes('lanzamiento');
 
-      testAtlRecords.forEach((r) => {
-        const st = getStudentForRecord(r);
-        if (!st) return;
+      const studentBestMap = new Map<string, { student: AlumnoInscrito; result: string; numericVal: number; fecha: string }>();
 
-        const stKey = st.Nombre_Completo.trim().toLowerCase();
-        const numVal = isTimeTest
-          ? parseSecondsFromFormattedTime(r.Resultado_Principal)
-          : parseDistanceInMeters(r.Resultado_Principal);
+      const updateStudentMark = (student: AlumnoInscrito, resultStr: string, fechaStr: string = '') => {
+        if (!resultStr || resultStr === '-' || resultStr === 'No Completada') return;
+        if (!targetStudentsSet.has(student)) return;
+
+        const stKey = student.Nombre_Completo.trim().toLowerCase();
+        let numVal = 0;
+        if (isTimeTest) {
+          numVal = parseSecondsFromFormattedTime(resultStr);
+        } else if (isDistanceTest) {
+          numVal = parseDistanceInMeters(resultStr);
+        } else {
+          numVal = 1;
+        }
 
         const current = studentBestMap.get(stKey);
         if (!current) {
-          studentBestMap.set(stKey, { student: st, result: r.Resultado_Principal, numericVal: numVal, fecha: r.Fecha || '' });
+          studentBestMap.set(stKey, { student, result: resultStr, numericVal: numVal, fecha: fechaStr });
         } else {
-          const isBetter = isTimeTest ? numVal < current.numericVal : numVal > current.numericVal;
+          let isBetter = false;
+          if (isTimeTest) isBetter = numVal < current.numericVal;
+          else if (isDistanceTest) isBetter = numVal > current.numericVal;
+
           if (isBetter) {
-            studentBestMap.set(stKey, { student: st, result: r.Resultado_Principal, numericVal: numVal, fecha: r.Fecha || '' });
+            studentBestMap.set(stKey, { student, result: resultStr, numericVal: numVal, fecha: fechaStr });
           }
         }
+      };
+
+      // 1. Evaluate Sheet 2 Group Tabs records
+      groupTabRecords.forEach((gtRec) => {
+        const st = getStudentForRecord(gtRec);
+        if (!st) return;
+
+        let markVal = '-';
+        if (cleanTestName.includes('50m') || cleanTestName.includes('75m') || cleanTestName.includes('100m') || cleanTestName.includes('velocidad')) {
+          markVal = gtRec.velocidad;
+        } else if (cleanTestName.includes('200m') || cleanTestName.includes('400m') || cleanTestName.includes('600m') || cleanTestName.includes('800m') || cleanTestName.includes('resistencia')) {
+          markVal = gtRec.resistencia;
+        } else if (cleanTestName === 'salto') {
+          markVal = gtRec.salto;
+        } else if (cleanTestName === 'lanzamiento') {
+          markVal = gtRec.lanzamiento;
+        } else if (cleanTestName.includes('cuerda')) {
+          markVal = gtRec.cuerda;
+        } else if (cleanTestName.includes('orden')) {
+          markVal = gtRec.ordenYControl;
+        } else if (cleanTestName.includes('abc')) {
+          markVal = gtRec.abc;
+        }
+
+        updateStudentMark(st, markVal, '');
       });
 
-      testCualRecords.forEach((r) => {
+      // 2. Evaluate Sheet 1 Atletismo Records
+      registrosAtl.forEach((r) => {
         const st = getStudentForRecord(r);
         if (!st) return;
-        const stKey = st.Nombre_Completo.trim().toLowerCase();
-        if (!studentBestMap.has(stKey)) {
-          studentBestMap.set(stKey, { student: st, result: r.Calificacion, numericVal: 1, fecha: r.Fecha || '' });
+
+        const pName = (r.Prueba || '').toLowerCase().trim();
+        let matchesThisTest = false;
+
+        if (cleanTestName.includes('50m') && pName.includes('50m')) matchesThisTest = true;
+        else if (cleanTestName.includes('75m') && pName.includes('75m')) matchesThisTest = true;
+        else if (cleanTestName.includes('100m') && pName.includes('100m')) matchesThisTest = true;
+        else if (cleanTestName.includes('200m') && pName.includes('200m')) matchesThisTest = true;
+        else if (cleanTestName.includes('400m') && (pName.includes('400m') || pName.includes('planos'))) matchesThisTest = true;
+        else if (cleanTestName.includes('600m') && pName.includes('600m')) matchesThisTest = true;
+        else if (cleanTestName.includes('800m') && (pName.includes('800m') || pName.includes('medio fondo'))) matchesThisTest = true;
+        else if (cleanTestName === 'salto' && pName.includes('salto') && !pName.includes('cuerda')) matchesThisTest = true;
+        else if (cleanTestName === 'lanzamiento' && pName.includes('lanzamiento')) matchesThisTest = true;
+        else if (cleanTestName.includes('cuerda') && pName.includes('cuerda')) matchesThisTest = true;
+        else if (cleanTestName.includes('orden') && pName.includes('orden')) matchesThisTest = true;
+        else if (cleanTestName.includes('abc') && pName.includes('abc')) matchesThisTest = true;
+
+        if (matchesThisTest) {
+          updateStudentMark(st, r.Resultado_Principal, r.Fecha || '');
         }
       });
 
-      // Sort students with marks from best to worst
+      // 3. Evaluate Sheet 1 Cualitativo Records
+      if (cleanTestName.includes('cuerda') || cleanTestName.includes('orden') || cleanTestName.includes('abc')) {
+        registrosCual.forEach((r) => {
+          const st = getStudentForRecord(r);
+          if (!st) return;
+
+          const pName = (r.Deporte_o_Prueba || '').toLowerCase().trim();
+          let matchesThisTest = false;
+
+          if (cleanTestName.includes('cuerda') && pName.includes('cuerda')) matchesThisTest = true;
+          else if (cleanTestName.includes('orden') && pName.includes('orden')) matchesThisTest = true;
+          else if (cleanTestName.includes('abc') && pName.includes('abc')) matchesThisTest = true;
+
+          if (matchesThisTest) {
+            updateStudentMark(st, r.Calificacion, r.Fecha || '');
+          }
+        });
+      }
+
+      // Sort ranked students from best to worst
       const rankedWithMarks = Array.from(studentBestMap.values()).sort((a, b) => {
         if (isTimeTest) return a.numericVal - b.numericVal;
-        return b.numericVal - a.numericVal;
+        if (isDistanceTest) return b.numericVal - a.numericVal;
+        return 0;
       });
 
-      if (!isFilteredByGroup && nivel === 'Todos') {
-        // Mode A: "Todos los Niveles" -> Return TOP 3 overall
+      if (!isFilteredGroup && nivel === 'Todos') {
+        // Mode A: "Todos los Niveles" -> Return TOP 3 overall per test
         const top3 = rankedWithMarks.slice(0, 3).map((item, index) => ({
           posicion: index + 1,
           idRegistro: item.student.ID_Alumno + '_' + index,
@@ -248,7 +300,7 @@ export async function GET(request: Request) {
           leaderboards[testName] = top3;
         }
       } else {
-        // Mode B: Specific Nivel, Grado, Grupo, or Rama selected -> Return ALL students of that group/grade/rama ordered best to worst
+        // Mode B: Specific Nivel, Grado, Grupo, or Rama selected -> Return ALL students of that filtered group
         const resultList: Array<any> = [];
 
         rankedWithMarks.forEach((item, index) => {
@@ -303,4 +355,5 @@ export async function GET(request: Request) {
     );
   }
 }
+
 

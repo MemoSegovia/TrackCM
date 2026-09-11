@@ -909,3 +909,94 @@ export async function updateGrupoMejoresResultadosSheet(
   }
 }
 
+export interface GroupTabMarkRecord {
+  nombreAlumno: string;
+  genero: string;
+  velocidad: string;
+  salto: string;
+  lanzamiento: string;
+  resistencia: string;
+  cuerda: string;
+  ordenYControl: string;
+  abc: string;
+}
+
+export async function getGroupTabsRecordsBatch(): Promise<GroupTabMarkRecord[]> {
+  const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
+  const privateKey = getSanitizedPrivateKey(process.env.GOOGLE_PRIVATE_KEY);
+  const mejoesSpreadsheetId = getSanitizedSpreadsheetId(
+    getSpreadsheetIdForCiclo()
+  );
+
+  if (!clientEmail || !privateKey || !mejoesSpreadsheetId) {
+    return [];
+  }
+
+  const PESTANIAS_GRUPOS = [
+    'K3A', 'K3B', 'K3C', 'K3D',
+    '1A', '1B', '1C', '2A', '2B', '2C', '3A', '3B', '3C',
+    '4A', '4B', '4C', '5A', '5B', '5C', '6A', '6B', '6C',
+    '7A', '7B', '7C', '8A', '8B', '8C', '9A', '9B', '9C',
+    '10A', '10B', '10C', '10D', '10E', '11A', '11B', '12A', '12B', '12C', '12D',
+  ];
+
+  try {
+    const auth = new google.auth.JWT({
+      email: clientEmail,
+      key: privateKey,
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    const res = await sheets.spreadsheets.values.batchGet({
+      spreadsheetId: mejoesSpreadsheetId,
+      ranges: PESTANIAS_GRUPOS.map((g) => `'${g}'!A5:J`),
+    });
+
+    const records: GroupTabMarkRecord[] = [];
+    (res.data.valueRanges || []).forEach((rangeObj) => {
+      const rows = rangeObj.values || [];
+      rows.forEach((r) => {
+        const nombreAlumno = r[1] || '';
+        const genero = r[2] || '';
+        const velocidad = r[3] || '-';
+        const salto = r[4] || '-';
+        const lanzamiento = r[5] || '-';
+        const resistencia = r[6] || '-';
+        const cuerda = r[7] || '-';
+        const ordenYControl = r[8] || '-';
+        const abc = r[9] || '-';
+
+        if (
+          (velocidad && velocidad !== '-') ||
+          (salto && salto !== '-') ||
+          (lanzamiento && lanzamiento !== '-') ||
+          (resistencia && resistencia !== '-') ||
+          (cuerda && cuerda !== '-') ||
+          (ordenYControl && ordenYControl !== '-') ||
+          (abc && abc !== '-')
+        ) {
+          records.push({
+            nombreAlumno,
+            genero,
+            velocidad,
+            salto,
+            lanzamiento,
+            resistencia,
+            cuerda,
+            ordenYControl,
+            abc,
+          });
+        }
+      });
+    });
+
+    return records;
+  } catch (err) {
+    console.error('Error in getGroupTabsRecordsBatch:', err);
+    return [];
+  }
+}
+
+
