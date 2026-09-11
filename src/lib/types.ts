@@ -89,10 +89,21 @@ export interface MultiStudentRunner {
 export interface AdminTeacherActivity {
   idMaestro: string;
   nombreMaestro: string;
+  nivelAsignado?: string;
   totalRegistros: number;
   totalAntropometricos: number;
   totalAtletismo: number;
   totalCualitativos: number;
+}
+
+export interface ConnectedUserItem {
+  id: string;
+  nombre: string;
+  correo: string;
+  rol: RolUsuario;
+  nivelAsignado?: string;
+  estado: 'En línea' | 'Activo';
+  ultimoAcceso: string;
 }
 
 export interface AdminMetrics {
@@ -103,4 +114,6 @@ export interface AdminMetrics {
   totalRegistrosCual: number;
   actividadMaestros: AdminTeacherActivity[];
   alumnosPorNivel: Record<string, number>;
+  usuariosConectados?: ConnectedUserItem[];
 }
+

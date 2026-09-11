@@ -103,7 +103,7 @@ export default function Navbar({ user }: NavbarProps) {
               </Link>
             )}
 
-            {(isTeacher || isAdmin) && (
+            {isTeacher && !isAdmin && (
               <Link
                 href="/maestro"
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -223,7 +223,7 @@ export default function Navbar({ user }: NavbarProps) {
             </Link>
           )}
 
-          {(isTeacher || isAdmin) && (
+          {isTeacher && !isAdmin && (
             <Link
               href="/maestro"
               className={`flex items-center gap-1 px-2 py-1 rounded-md ${

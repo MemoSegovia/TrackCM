@@ -216,6 +216,7 @@ export default function AdminPage() {
                     <thead className="bg-slate-950 text-slate-400 uppercase font-mono border-b border-slate-800">
                       <tr>
                         <th className="py-2.5 px-3">Profesor</th>
+                        <th className="py-2.5 px-3">Nivel Escolar</th>
                         <th className="py-2.5 px-3 text-center">Atletismo</th>
                         <th className="py-2.5 px-3 text-center">IMC / Antro</th>
                         <th className="py-2.5 px-3 text-center">Cualitativos</th>
@@ -230,6 +231,9 @@ export default function AdminPage() {
                               {m.nombreMaestro.charAt(0)}
                             </div>
                             {m.nombreMaestro}
+                          </td>
+                          <td className="py-3 px-3 font-semibold text-emerald-400">
+                            {m.nivelAsignado || 'Educación Física'}
                           </td>
                           <td className="py-3 px-3 text-center font-mono text-amber-400">
                             {m.totalAtletismo}
@@ -249,6 +253,46 @@ export default function AdminPage() {
                   </table>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Connected Users / Active Teachers & Students Widget */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-base font-bold text-white">Maestros y Usuarios Conectados a la Aplicación</h3>
+              </div>
+              <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                {metrics?.usuariosConectados?.length || 0} Usuarios Activos
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {metrics?.usuariosConectados?.map((u) => (
+                <div
+                  key={u.id}
+                  className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between transition-all hover:border-slate-700"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <div className="w-9 h-9 rounded-full bg-indigo-500/20 text-indigo-300 font-extrabold flex items-center justify-center text-xs">
+                        {u.nombre.charAt(0)}
+                      </div>
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-slate-950 absolute bottom-0 right-0" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white">{u.nombre}</p>
+                      <p className="text-[10px] text-slate-400">{u.rol} • <span className="text-emerald-400 font-semibold">{u.nivelAsignado}</span></p>
+                      <p className="text-[10px] text-slate-500 font-mono">{u.correo}</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    {u.estado}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 

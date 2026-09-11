@@ -5,6 +5,7 @@ import {
   getRegistrosAntropometricos,
   getRegistrosAtletismo,
   getRegistrosCualitativos,
+  getTeacherNameForLevel,
 } from '@/lib/googleSheets';
 
 export const dynamic = 'force-dynamic';
@@ -19,9 +20,11 @@ export async function GET() {
       getRegistrosCualitativos(),
     ]);
 
-    const maestros = usuarios.filter((u) => u.Rol?.toLowerCase() === 'maestro');
+    const maestros = usuarios.filter(
+      (u) => u.Rol?.toLowerCase() === 'maestro' || u.Rol?.toLowerCase() === 'profesor'
+    );
 
-    // Count students per level
+    // Count students per level (handling 'Primaria' + Grade 1-3 vs 4-6)
     const alumnosPorNivel: Record<string, number> = {
       Kinder: 0,
       'Primaria Menor': 0,
@@ -31,13 +34,50 @@ export async function GET() {
     };
 
     alumnos.forEach((a) => {
-      const niv = a.Nivel || 'Otros';
-      if (alumnosPorNivel[niv] !== undefined) {
-        alumnosPorNivel[niv]++;
+      const rawNivel = (a.Nivel || '').trim().toLowerCase();
+      const cleanGrado = (a.Grado || '').replace(/[^0-9]/g, '');
+      const numGrado = parseInt(cleanGrado, 10);
+
+      let key = 'Otros';
+      if (rawNivel.includes('kinder')) {
+        key = 'Kinder';
+      } else if (
+        rawNivel.includes('primaria menor') ||
+        (rawNivel.includes('primaria') && numGrado >= 1 && numGrado <= 3)
+      ) {
+        key = 'Primaria Menor';
+      } else if (
+        rawNivel.includes('primaria mayor') ||
+        (rawNivel.includes('primaria') && numGrado >= 4 && numGrado <= 6)
+      ) {
+        key = 'Primaria Mayor';
+      } else if (rawNivel.includes('secundaria')) {
+        key = 'Secundaria';
+      } else if (
+        rawNivel.includes('preparatoria') ||
+        rawNivel.includes('prepa') ||
+        rawNivel.includes('bachillerato')
+      ) {
+        key = 'Preparatoria';
+      }
+
+      if (alumnosPorNivel[key] !== undefined) {
+        alumnosPorNivel[key]++;
       } else {
-        alumnosPorNivel[niv] = 1;
+        alumnosPorNivel[key] = 1;
       }
     });
+
+    // Helper to resolve level assigned for teacher
+    const getLevelForTeacher = (nombre: string, nivelAsignado?: string): string => {
+      if (nivelAsignado && nivelAsignado.trim() !== '') return nivelAsignado;
+      const n = (nombre || '').toLowerCase();
+      if (n.includes('hinojosa') || n.includes('jaqueline')) return 'Kinder';
+      if (n.includes('campos') || n.includes('orlando')) return 'Primaria Menor';
+      if (n.includes('ibarra') || n.includes('diego')) return 'Primaria Mayor';
+      if (n.includes('armenta') || n.includes('eduardo')) return 'Secundaria / Preparatoria';
+      return 'Educación Física';
+    };
 
     // Activity breakdown per teacher
     const actividadMaestros = maestros.map((m) => {
@@ -48,12 +88,24 @@ export async function GET() {
       return {
         idMaestro: m.ID_Usuario,
         nombreMaestro: m.Nombre,
+        nivelAsignado: getLevelForTeacher(m.Nombre, m.Nivel_Asignado),
         totalRegistros: countAntro + countAtl + countCual,
         totalAntropometricos: countAntro,
         totalAtletismo: countAtl,
         totalCualitativos: countCual,
       };
     });
+
+    // Users and Teachers connected list
+    const usuariosConectados = usuarios.map((u) => ({
+      id: u.ID_Usuario,
+      nombre: u.Nombre,
+      correo: u.Correo,
+      rol: u.Rol,
+      nivelAsignado: getLevelForTeacher(u.Nombre, u.Nivel_Asignado),
+      estado: 'En línea' as const,
+      ultimoAcceso: 'Ahora mismo',
+    }));
 
     return NextResponse.json({
       success: true,
@@ -65,6 +117,7 @@ export async function GET() {
         totalRegistrosCual: cual.length,
         actividadMaestros,
         alumnosPorNivel,
+        usuariosConectados,
       },
     });
   } catch (error) {
@@ -75,3 +128,4 @@ export async function GET() {
     );
   }
 }
+
