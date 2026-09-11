@@ -57,12 +57,46 @@ export default function Navbar({ user }: NavbarProps) {
     setIsSyncing(false);
   };
 
-  const handleLogout = () => {
+  // Active session heartbeat ping
+  useEffect(() => {
+    if (!user || typeof window === 'undefined') return;
+
+    const sendPing = async () => {
+      try {
+        await fetch('/api/auth/active-users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user }),
+        });
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    sendPing();
+    const interval = setInterval(sendPing, 45000);
+
+    return () => clearInterval(interval);
+  }, [user]);
+
+  const handleLogout = async () => {
     if (typeof window !== 'undefined') {
+      if (user?.id) {
+        try {
+          await fetch('/api/auth/active-users', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.id }),
+          });
+        } catch (e) {
+          // ignore
+        }
+      }
       localStorage.removeItem('trackcm_user');
     }
     router.push('/login');
   };
+
 
   const rolLower = user?.rol?.toLowerCase() || '';
   const isTeacher = rolLower === 'maestro' || rolLower === 'profesor';

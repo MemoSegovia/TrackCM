@@ -269,31 +269,38 @@ export default function AdminPage() {
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              {metrics?.usuariosConectados?.map((u) => (
-                <div
-                  key={u.id}
-                  className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between transition-all hover:border-slate-700"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <div className="w-9 h-9 rounded-full bg-indigo-500/20 text-indigo-300 font-extrabold flex items-center justify-center text-xs">
-                        {u.nombre.charAt(0)}
+            {!metrics?.usuariosConectados || metrics.usuariosConectados.length === 0 ? (
+              <div className="py-6 text-center text-xs font-semibold text-slate-500 bg-slate-950 rounded-xl border border-slate-800">
+                No hay maestros o usuarios con sesión activa iniciada en este momento.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {metrics.usuariosConectados.map((u) => (
+                  <div
+                    key={u.id}
+                    className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between transition-all hover:border-slate-700"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="relative">
+                        <div className="w-9 h-9 rounded-full bg-indigo-500/20 text-indigo-300 font-extrabold flex items-center justify-center text-xs">
+                          {u.nombre.charAt(0)}
+                        </div>
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-slate-950 absolute bottom-0 right-0" />
                       </div>
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-slate-950 absolute bottom-0 right-0" />
+                      <div>
+                        <p className="text-xs font-bold text-white">{u.nombre}</p>
+                        <p className="text-[10px] text-slate-400">{u.rol} • <span className="text-emerald-400 font-semibold">{u.nivelAsignado}</span></p>
+                        <p className="text-[10px] text-slate-500 font-mono">{u.correo}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-bold text-white">{u.nombre}</p>
-                      <p className="text-[10px] text-slate-400">{u.rol} • <span className="text-emerald-400 font-semibold">{u.nivelAsignado}</span></p>
-                      <p className="text-[10px] text-slate-500 font-mono">{u.correo}</p>
-                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      {u.estado}
+                    </span>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    {u.estado}
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
+
           </div>
 
           {/* Table of Consolidated Best Results */}

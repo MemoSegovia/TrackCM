@@ -7,6 +7,7 @@ import {
   getRegistrosCualitativos,
   getTeacherNameForLevel,
 } from '@/lib/googleSheets';
+import { getActiveSessions } from '@/lib/activeSessions';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,16 +97,8 @@ export async function GET() {
       };
     });
 
-    // Users and Teachers connected list
-    const usuariosConectados = usuarios.map((u) => ({
-      id: u.ID_Usuario,
-      nombre: u.Nombre,
-      correo: u.Correo,
-      rol: u.Rol,
-      nivelAsignado: getLevelForTeacher(u.Nombre, u.Nivel_Asignado),
-      estado: 'En línea' as const,
-      ultimoAcceso: 'Ahora mismo',
-    }));
+    // Users and Teachers with an active logged-in session
+    const usuariosConectados = getActiveSessions();
 
     return NextResponse.json({
       success: true,
@@ -128,4 +121,5 @@ export async function GET() {
     );
   }
 }
+
 
