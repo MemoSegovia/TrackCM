@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { PESTANIAS_GRUPOS_OFICIALES, getNivelByGrupo, isStudentInGrupo, StudentBestMarksRow } from '@/lib/mejoresResultados';
 import { AlumnoInscrito, UserSession } from '@/lib/types';
-import { Table, RefreshCw, FileText, CheckCircle, Search, Layers, Download, FileSpreadsheet } from 'lucide-react';
+import { Table, RefreshCw, FileText, CheckCircle, Search, Layers, Download, FileSpreadsheet, Pencil, Trash2, X, Save, AlertTriangle } from 'lucide-react';
 import { exportElementToPdf } from '@/lib/exportPdf';
 
 interface BestResultsTableProps {
@@ -20,6 +20,29 @@ export default function BestResultsTable({ user, cicloEscolar = '2026-2027' }: B
   const [syncing, setSyncing] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [msg, setMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Edit / Delete states
+  const [editingRow, setEditingRow] = useState<StudentBestMarksRow | null>(null);
+  const [editForm, setEditForm] = useState<{
+    velocidad: string;
+    salto: string;
+    lanzamiento: string;
+    resistencia: string;
+    cuerda: string;
+    ordenYControl: string;
+    abc: string;
+  }>({
+    velocidad: '',
+    salto: '',
+    lanzamiento: '',
+    resistencia: '',
+    cuerda: '',
+    ordenYControl: '',
+    abc: '',
+  });
+
+  const [deletingRow, setDeletingRow] = useState<StudentBestMarksRow | null>(null);
+  const [actionLoading, setActionLoading] = useState<boolean>(false);
 
   const rolLower = user?.rol?.toLowerCase() || '';
   const isAdmin = rolLower === 'administrador' || rolLower === 'admin';
@@ -150,6 +173,86 @@ export default function BestResultsTable({ user, cicloEscolar = '2026-2027' }: B
     );
   };
 
+  const handleOpenEdit = (row: StudentBestMarksRow) => {
+    setEditingRow(row);
+    setEditForm({
+      velocidad: row.velocidad === '-' ? '' : row.velocidad,
+      salto: row.salto === '-' ? '' : row.salto,
+      lanzamiento: row.lanzamiento === '-' ? '' : row.lanzamiento,
+      resistencia: row.resistencia === '-' ? '' : row.resistencia,
+      cuerda: row.cuerda === '-' ? '' : row.cuerda,
+      ordenYControl: row.ordenYControl === '-' ? '' : row.ordenYControl,
+      abc: row.abc === '-' ? '' : row.abc,
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingRow) return;
+    try {
+      setActionLoading(true);
+      setMsg(null);
+      const res = await fetch('/api/mejores-resultados', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          idAlumno: editingRow.idAlumno,
+          nombreAlumno: editingRow.nombreAlumno,
+          grupo: selectedGrupo,
+          cicloEscolar,
+          nombreMaestro: user?.nombre || 'Prof. Educación Física',
+          marks: editForm,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setMsg({ type: 'success', text: data.message });
+        if (data.rows) setRows(data.rows);
+        setEditingRow(null);
+      } else {
+        setMsg({ type: 'error', text: data.error || 'Error al guardar la edición' });
+      }
+    } catch (err) {
+      console.error(err);
+      setMsg({ type: 'error', text: 'Error de red al actualizar los resultados' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingRow) return;
+    try {
+      setActionLoading(true);
+      setMsg(null);
+      const res = await fetch('/api/mejores-resultados', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          idAlumno: deletingRow.idAlumno,
+          nombreAlumno: deletingRow.nombreAlumno,
+          grupo: selectedGrupo,
+          cicloEscolar,
+          nombreMaestro: user?.nombre || 'Prof. Educación Física',
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setMsg({ type: 'success', text: data.message });
+        if (data.rows) setRows(data.rows);
+        setDeletingRow(null);
+      } else {
+        setMsg({ type: 'error', text: data.error || 'Error al eliminar los resultados' });
+      }
+    } catch (err) {
+      console.error(err);
+      setMsg({ type: 'error', text: 'Error de red al eliminar los resultados' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const filteredRows = rows.filter(
     (r) =>
       r.nombreAlumno.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -157,7 +260,7 @@ export default function BestResultsTable({ user, cicloEscolar = '2026-2027' }: B
   );
 
   return (
-    <div id="printable-mejores-resultados" className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6">
+    <div id="printable-mejores-resultados" className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6 relative">
       {/* Header Banner */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div className="flex items-center gap-3">
@@ -328,6 +431,7 @@ export default function BestResultsTable({ user, cicloEscolar = '2026-2027' }: B
                 <th className="py-3.5 px-4 text-purple-400">Cuerda</th>
                 <th className="py-3.5 px-4 text-indigo-400">Orden y Control</th>
                 <th className="py-3.5 px-4 text-pink-400">ABC</th>
+                <th className="py-3.5 px-4 text-center">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
@@ -353,12 +457,194 @@ export default function BestResultsTable({ user, cicloEscolar = '2026-2027' }: B
                   <td className="py-3 px-4 font-bold text-purple-300">{r.cuerda}</td>
                   <td className="py-3 px-4 font-bold text-indigo-300">{r.ordenYControl}</td>
                   <td className="py-3 px-4 font-bold text-pink-300">{r.abc}</td>
+                  <td className="py-3 px-4 text-center font-sans">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <button
+                        onClick={() => handleOpenEdit(r)}
+                        className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 border border-amber-500/30 transition-all active:scale-95"
+                        title="Editar marcas del alumno"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setDeletingRow(r)}
+                        className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/30 transition-all active:scale-95"
+                        title="Borrar marcas del alumno"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
+
+      {/* Edit Modal */}
+      {editingRow && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                  <Pencil className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-base font-black text-white">Editar Resultados</h4>
+                  <p className="text-xs text-slate-400">{editingRow.nombreAlumno} ({editingRow.idAlumno})</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditingRow(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div>
+                <label className="block font-extrabold text-emerald-400 mb-1">Velocidad (ej. 00:05.10 s)</label>
+                <input
+                  type="text"
+                  value={editForm.velocidad}
+                  onChange={(e) => setEditForm({ ...editForm, velocidad: e.target.value })}
+                  placeholder="ej. 00:05.10 s o -"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 font-mono focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-extrabold text-amber-300 mb-1">Salto (ej. 1.85 m)</label>
+                <input
+                  type="text"
+                  value={editForm.salto}
+                  onChange={(e) => setEditForm({ ...editForm, salto: e.target.value })}
+                  placeholder="ej. 1.85 m o -"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 font-mono focus:border-amber-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-extrabold text-amber-400 mb-1">Lanzamiento (ej. 12.5 m)</label>
+                <input
+                  type="text"
+                  value={editForm.lanzamiento}
+                  onChange={(e) => setEditForm({ ...editForm, lanzamiento: e.target.value })}
+                  placeholder="ej. 12.5 m o -"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 font-mono focus:border-amber-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-extrabold text-cyan-300 mb-1">Resistencia (ej. 04:30 min)</label>
+                <input
+                  type="text"
+                  value={editForm.resistencia}
+                  onChange={(e) => setEditForm({ ...editForm, resistencia: e.target.value })}
+                  placeholder="ej. 04:30 min o -"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 font-mono focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-extrabold text-purple-300 mb-1">Cuerda (ej. 45)</label>
+                <input
+                  type="text"
+                  value={editForm.cuerda}
+                  onChange={(e) => setEditForm({ ...editForm, cuerda: e.target.value })}
+                  placeholder="ej. 45 o -"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 font-mono focus:border-purple-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-extrabold text-indigo-300 mb-1">Orden y Control</label>
+                <input
+                  type="text"
+                  value={editForm.ordenYControl}
+                  onChange={(e) => setEditForm({ ...editForm, ordenYControl: e.target.value })}
+                  placeholder="Excelente, Bueno, etc."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 font-mono focus:border-indigo-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block font-extrabold text-pink-300 mb-1">ABC Atletismo</label>
+                <input
+                  type="text"
+                  value={editForm.abc}
+                  onChange={(e) => setEditForm({ ...editForm, abc: e.target.value })}
+                  placeholder="Excelente, Bueno, Suficiente, etc."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 font-mono focus:border-pink-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-slate-800 pt-4">
+              <button
+                onClick={() => setEditingRow(null)}
+                disabled={actionLoading}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={actionLoading}
+                className="px-5 py-2 rounded-xl text-xs font-black bg-emerald-500 hover:bg-emerald-600 text-slate-950 transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50"
+              >
+                <Save className="w-4 h-4" />
+                {actionLoading ? 'Guardando y Sincronizando...' : 'Guardar y Sincronizar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingRow && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h4 className="text-base font-black text-white">¿Borrar Resultados del Alumno?</h4>
+                <p className="text-xs text-slate-400">Esta acción eliminará las marcas de este alumno y sincronizará Google Sheets.</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-950 p-3.5 rounded-2xl border border-slate-800 text-xs space-y-1">
+              <div><span className="text-slate-400 font-semibold">Alumno:</span> <span className="font-extrabold text-white">{deletingRow.nombreAlumno}</span></div>
+              <div><span className="text-slate-400 font-semibold">ID Alumno:</span> <span className="font-mono text-emerald-400">{deletingRow.idAlumno}</span></div>
+              <div><span className="text-slate-400 font-semibold">Pestaña / Grupo:</span> <span className="font-extrabold text-amber-400">{selectedGrupo}</span></div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-slate-800 pt-4">
+              <button
+                onClick={() => setDeletingRow(null)}
+                disabled={actionLoading}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={actionLoading}
+                className="px-5 py-2 rounded-xl text-xs font-black bg-rose-500 hover:bg-rose-600 text-white transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50"
+              >
+                <Trash2 className="w-4 h-4" />
+                {actionLoading ? 'Eliminando...' : 'Sí, Borrar y Sincronizar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

@@ -441,6 +441,344 @@ export async function addRegistroCualitativo(data: RegistroCualitativo): Promise
   }
 }
 
+function matchesStudentHelper(recId?: string, recName?: string, targetId?: string, targetName?: string): boolean {
+  if (recId && targetId && recId.trim() === targetId.trim()) return true;
+  if (!recName || !targetName) return false;
+  const cleanRec = recName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/,/g, ' ').toLowerCase().trim().split(/\s+/).filter(t => t.length > 1);
+  const cleanTgt = targetName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/,/g, ' ').toLowerCase().trim().split(/\s+/).filter(t => t.length > 1);
+  const setRec = new Set(cleanRec);
+  const setTgt = new Set(cleanTgt);
+  let overlap = 0;
+  setRec.forEach(t => { if (setTgt.has(t)) overlap++; });
+  const minTokens = Math.min(setRec.size, setTgt.size);
+  return overlap >= 2 && overlap >= minTokens - 1;
+}
+
+export async function deleteRegistrosAlumno(idAlumno: string, nombreAlumno: string): Promise<boolean> {
+  const client = getGoogleSheetsClient();
+  if (!client) {
+    for (let i = MOCK_ATLETISMO.length - 1; i >= 0; i--) {
+      if (matchesStudentHelper(MOCK_ATLETISMO[i].ID_Alumno, MOCK_ATLETISMO[i].Nombre_Alumno, idAlumno, nombreAlumno)) {
+        MOCK_ATLETISMO.splice(i, 1);
+      }
+    }
+    for (let i = MOCK_CUALITATIVOS.length - 1; i >= 0; i--) {
+      if (matchesStudentHelper(MOCK_CUALITATIVOS[i].ID_Alumno, MOCK_CUALITATIVOS[i].Nombre_Alumno, idAlumno, nombreAlumno)) {
+        MOCK_CUALITATIVOS.splice(i, 1);
+      }
+    }
+    return true;
+  }
+
+  try {
+    const meta = await client.sheets.spreadsheets.get({
+      spreadsheetId: client.spreadsheetId,
+    });
+
+    // 1. Delete from Registros_Atletismo
+    const atlSheet = meta.data.sheets?.find((s) => s.properties?.title === 'Registros_Atletismo');
+    if (atlSheet && atlSheet.properties?.sheetId !== undefined) {
+      const sheetId = atlSheet.properties.sheetId;
+      const res = await client.sheets.spreadsheets.values.get({
+        spreadsheetId: client.spreadsheetId,
+        range: 'Registros_Atletismo!A2:Z',
+      });
+      const rows = res.data.values || [];
+      const rowIndicesToDelete: number[] = [];
+      rows.forEach((r, idx) => {
+        const isNewSchema = r.length >= 11;
+        const rId = r[2] || '';
+        const rName = isNewSchema ? r[3] : r[1] || '';
+        if (matchesStudentHelper(rId, rName, idAlumno, nombreAlumno)) {
+          rowIndicesToDelete.push(idx + 1); // 1-indexed (since A2 is index 1 in data)
+        }
+      });
+
+      rowIndicesToDelete.sort((a, b) => b - a);
+      const requests = rowIndicesToDelete.map((rowIndex) => ({
+        deleteDimension: {
+          range: {
+            sheetId,
+            dimension: 'ROWS',
+            startIndex: rowIndex,
+            endIndex: rowIndex + 1,
+          },
+        },
+      }));
+      if (requests.length > 0) {
+        await client.sheets.spreadsheets.batchUpdate({
+          spreadsheetId: client.spreadsheetId,
+          requestBody: { requests },
+        });
+      }
+    }
+
+    // 2. Delete from Registros_Cualitativos
+    const cualSheet = meta.data.sheets?.find((s) => s.properties?.title === 'Registros_Cualitativos');
+    if (cualSheet && cualSheet.properties?.sheetId !== undefined) {
+      const sheetId = cualSheet.properties.sheetId;
+      const res = await client.sheets.spreadsheets.values.get({
+        spreadsheetId: client.spreadsheetId,
+        range: 'Registros_Cualitativos!A2:Z',
+      });
+      const rows = res.data.values || [];
+      const rowIndicesToDelete: number[] = [];
+      rows.forEach((r, idx) => {
+        const isNewSchema = r.length >= 9;
+        const rId = r[2] || '';
+        const rName = isNewSchema ? r[3] : r[1] || '';
+        if (matchesStudentHelper(rId, rName, idAlumno, nombreAlumno)) {
+          rowIndicesToDelete.push(idx + 1);
+        }
+      });
+
+      rowIndicesToDelete.sort((a, b) => b - a);
+      const requests = rowIndicesToDelete.map((rowIndex) => ({
+        deleteDimension: {
+          range: {
+            sheetId,
+            dimension: 'ROWS',
+            startIndex: rowIndex,
+            endIndex: rowIndex + 1,
+          },
+        },
+      }));
+      if (requests.length > 0) {
+        await client.sheets.spreadsheets.batchUpdate({
+          spreadsheetId: client.spreadsheetId,
+          requestBody: { requests },
+        });
+      }
+    }
+
+    return true;
+  } catch (err) {
+    console.error('Error in deleteRegistrosAlumno:', err);
+    return false;
+  }
+}
+
+export async function updateStudentMarksRecords(
+  idAlumno: string,
+  nombreAlumno: string,
+  cicloEscolar: string,
+  maestroNombre: string,
+  marks: {
+    velocidad?: string;
+    salto?: string;
+    lanzamiento?: string;
+    resistencia?: string;
+    cuerda?: string;
+    ordenYControl?: string;
+    abc?: string;
+  }
+): Promise<boolean> {
+  const client = getGoogleSheetsClient();
+  const today = new Date().toISOString().split('T')[0];
+  const teacherName = maestroNombre || 'Prof. Educación Física';
+
+  const atletismoTests: { key: keyof typeof marks; testName: string }[] = [
+    { key: 'velocidad', testName: 'Velocidad' },
+    { key: 'salto', testName: 'Salto de Longitud' },
+    { key: 'lanzamiento', testName: 'Lanzamiento de Pelota' },
+    { key: 'resistencia', testName: 'Resistencia' },
+    { key: 'cuerda', testName: 'Salto de Cuerda' },
+  ];
+
+  const cualitativoTests: { key: keyof typeof marks; testName: string }[] = [
+    { key: 'ordenYControl', testName: 'Orden y Control' },
+    { key: 'abc', testName: 'ABC Atletismo' },
+  ];
+
+  if (!client) {
+    // Mock Mode
+    atletismoTests.forEach(({ key, testName }) => {
+      const val = marks[key];
+      if (val !== undefined) {
+        const existing = MOCK_ATLETISMO.find(
+          (r) => matchesStudentHelper(r.ID_Alumno, r.Nombre_Alumno, idAlumno, nombreAlumno) && r.Prueba.toLowerCase().includes(testName.toLowerCase())
+        );
+        if (val && val !== '-') {
+          if (existing) {
+            existing.Resultado_Principal = val;
+          } else {
+            MOCK_ATLETISMO.push({
+              ID_Registro: `REG-ATL-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+              Fecha: today,
+              ID_Alumno: idAlumno,
+              Nombre_Alumno: nombreAlumno,
+              Ciclo_Escolar: cicloEscolar,
+              ID_Maestro: 'USR-006',
+              Nombre_Maestro: teacherName,
+              Prueba: testName,
+              Resultado_Principal: val,
+              Detalle_JSON_Vueltas: '',
+              Puntos: 0,
+            });
+          }
+        } else if (existing) {
+          const idx = MOCK_ATLETISMO.indexOf(existing);
+          MOCK_ATLETISMO.splice(idx, 1);
+        }
+      }
+    });
+
+    cualitativoTests.forEach(({ key, testName }) => {
+      const val = marks[key];
+      if (val !== undefined) {
+        const existing = MOCK_CUALITATIVOS.find(
+          (r) => matchesStudentHelper(r.ID_Alumno, r.Nombre_Alumno, idAlumno, nombreAlumno) && r.Deporte_o_Prueba.toLowerCase().includes(testName.toLowerCase())
+        );
+        if (val && val !== '-') {
+          if (existing) {
+            existing.Calificacion = val;
+          } else {
+            MOCK_CUALITATIVOS.push({
+              ID_Registro: `REG-CUAL-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+              Fecha: today,
+              ID_Alumno: idAlumno,
+              Nombre_Alumno: nombreAlumno,
+              Ciclo_Escolar: cicloEscolar,
+              ID_Maestro: 'USR-006',
+              Nombre_Maestro: teacherName,
+              Deporte_o_Prueba: testName,
+              Calificacion: val,
+            });
+          }
+        } else if (existing) {
+          const idx = MOCK_CUALITATIVOS.indexOf(existing);
+          MOCK_CUALITATIVOS.splice(idx, 1);
+        }
+      }
+    });
+
+    return true;
+  }
+
+  try {
+    // 1. Process Atletismo Tests
+    const resAtl = await client.sheets.spreadsheets.values.get({
+      spreadsheetId: client.spreadsheetId,
+      range: 'Registros_Atletismo!A2:Z',
+    });
+    const atlRows = resAtl.data.values || [];
+
+    for (const { key, testName } of atletismoTests) {
+      const val = marks[key];
+      if (val === undefined) continue;
+
+      let foundRowIndex = -1;
+      atlRows.forEach((r, idx) => {
+        const isNewSchema = r.length >= 11;
+        const rId = r[2] || '';
+        const rName = isNewSchema ? r[3] : r[1] || '';
+        const rPrueba = isNewSchema ? r[7] : r[5] || '';
+        if (matchesStudentHelper(rId, rName, idAlumno, nombreAlumno) && rPrueba.toLowerCase().includes(testName.toLowerCase())) {
+          foundRowIndex = idx + 2; // Row number in sheet (A2 is row 2)
+        }
+      });
+
+      if (val && val !== '-') {
+        if (foundRowIndex !== -1) {
+          // Update existing row (Column I = Resultado_Principal, index 9)
+          await client.sheets.spreadsheets.values.update({
+            spreadsheetId: client.spreadsheetId,
+            range: `Registros_Atletismo!I${foundRowIndex}`,
+            valueInputOption: 'USER_ENTERED',
+            requestBody: { values: [[val]] },
+          });
+        } else {
+          // Append new record
+          const regId = `REG-ATL-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+          await addRegistroAtletismo({
+            ID_Registro: regId,
+            Fecha: today,
+            ID_Alumno: idAlumno,
+            Nombre_Alumno: nombreAlumno,
+            Ciclo_Escolar: cicloEscolar,
+            ID_Maestro: 'USR-006',
+            Nombre_Maestro: teacherName,
+            Prueba: testName,
+            Resultado_Principal: val,
+            Detalle_JSON_Vueltas: '',
+            Puntos: 0,
+          });
+        }
+      } else if (foundRowIndex !== -1) {
+        // Clear/delete the row or set result to "-"
+        await client.sheets.spreadsheets.values.update({
+          spreadsheetId: client.spreadsheetId,
+          range: `Registros_Atletismo!I${foundRowIndex}`,
+          valueInputOption: 'USER_ENTERED',
+          requestBody: { values: [['-']] },
+        });
+      }
+    }
+
+    // 2. Process Cualitativo Tests
+    const resCual = await client.sheets.spreadsheets.values.get({
+      spreadsheetId: client.spreadsheetId,
+      range: 'Registros_Cualitativos!A2:Z',
+    });
+    const cualRows = resCual.data.values || [];
+
+    for (const { key, testName } of cualitativoTests) {
+      const val = marks[key];
+      if (val === undefined) continue;
+
+      let foundRowIndex = -1;
+      cualRows.forEach((r, idx) => {
+        const isNewSchema = r.length >= 9;
+        const rId = r[2] || '';
+        const rName = isNewSchema ? r[3] : r[1] || '';
+        const rPrueba = isNewSchema ? r[7] : r[5] || '';
+        if (matchesStudentHelper(rId, rName, idAlumno, nombreAlumno) && rPrueba.toLowerCase().includes(testName.toLowerCase())) {
+          foundRowIndex = idx + 2;
+        }
+      });
+
+      if (val && val !== '-') {
+        if (foundRowIndex !== -1) {
+          // Update existing row (Column I = Calificacion)
+          await client.sheets.spreadsheets.values.update({
+            spreadsheetId: client.spreadsheetId,
+            range: `Registros_Cualitativos!I${foundRowIndex}`,
+            valueInputOption: 'USER_ENTERED',
+            requestBody: { values: [[val]] },
+          });
+        } else {
+          // Append new record
+          const regId = `REG-CUAL-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+          await addRegistroCualitativo({
+            ID_Registro: regId,
+            Fecha: today,
+            ID_Alumno: idAlumno,
+            Nombre_Alumno: nombreAlumno,
+            Ciclo_Escolar: cicloEscolar,
+            ID_Maestro: 'USR-006',
+            Nombre_Maestro: teacherName,
+            Deporte_o_Prueba: testName,
+            Calificacion: val,
+          });
+        }
+      } else if (foundRowIndex !== -1) {
+        await client.sheets.spreadsheets.values.update({
+          spreadsheetId: client.spreadsheetId,
+          range: `Registros_Cualitativos!I${foundRowIndex}`,
+          valueInputOption: 'USER_ENTERED',
+          requestBody: { values: [['-']] },
+        });
+      }
+    }
+
+    return true;
+  } catch (err) {
+    console.error('Error updating student marks in googleSheets:', err);
+    return false;
+  }
+}
+
+
 function getSpreadsheetIdForCiclo(cicloEscolar?: string): string | undefined {
   if (cicloEscolar) {
     const cleanCiclo = cicloEscolar.replace(/[^a-zA-Z0-9]/g, '_');

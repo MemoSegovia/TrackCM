@@ -4,6 +4,8 @@ import {
   getRegistrosAtletismo,
   getRegistrosCualitativos,
   updateGrupoMejoresResultadosSheet,
+  deleteRegistrosAlumno,
+  updateStudentMarksRecords,
 } from '@/lib/googleSheets';
 import {
   calculateBestMarksForStudent,
@@ -126,3 +128,92 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const { idAlumno, nombreAlumno, grupo, cicloEscolar = '2026-2027', nombreMaestro = 'Prof. Educación Física', marks } = body;
+
+    if (!idAlumno || !nombreAlumno) {
+      return NextResponse.json({ success: false, error: 'ID de alumno y nombre son requeridos' }, { status: 400 });
+    }
+
+    const ok = await updateStudentMarksRecords(idAlumno, nombreAlumno, cicloEscolar, nombreMaestro, marks || {});
+    if (!ok) {
+      return NextResponse.json({ success: false, error: 'Error al actualizar las marcas en Google Sheets' }, { status: 500 });
+    }
+
+    // Re-fetch updated data and update group tab in Google Sheets
+    const [alumnos, atletismo, cualitativo] = await Promise.all([
+      getAlumnosInscritos(),
+      getRegistrosAtletismo(),
+      getRegistrosCualitativos(),
+    ]);
+
+    const groupStudents = alumnos.filter((a) => isStudentInGrupo(a, grupo));
+    const updatedRows = groupStudents.map((st) =>
+      calculateBestMarksForStudent(st, atletismo, cualitativo)
+    );
+
+    await updateGrupoMejoresResultadosSheet(
+      grupo,
+      cicloEscolar,
+      nombreMaestro,
+      updatedRows
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: `¡Resultados de ${nombreAlumno} actualizados y sincronizados con Google Sheets!`,
+      rows: updatedRows,
+    });
+  } catch (error) {
+    console.error('Error in PUT /api/mejores-resultados:', error);
+    return NextResponse.json({ success: false, error: 'Error al procesar la actualización' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const body = await request.json();
+    const { idAlumno, nombreAlumno, grupo, cicloEscolar = '2026-2027', nombreMaestro = 'Prof. Educación Física' } = body;
+
+    if (!idAlumno || !nombreAlumno) {
+      return NextResponse.json({ success: false, error: 'ID de alumno y nombre son requeridos' }, { status: 400 });
+    }
+
+    const ok = await deleteRegistrosAlumno(idAlumno, nombreAlumno);
+    if (!ok) {
+      return NextResponse.json({ success: false, error: 'Error al borrar los registros en Google Sheets' }, { status: 500 });
+    }
+
+    // Re-fetch updated data and update group tab in Google Sheets
+    const [alumnos, atletismo, cualitativo] = await Promise.all([
+      getAlumnosInscritos(),
+      getRegistrosAtletismo(),
+      getRegistrosCualitativos(),
+    ]);
+
+    const groupStudents = alumnos.filter((a) => isStudentInGrupo(a, grupo));
+    const updatedRows = groupStudents.map((st) =>
+      calculateBestMarksForStudent(st, atletismo, cualitativo)
+    );
+
+    await updateGrupoMejoresResultadosSheet(
+      grupo,
+      cicloEscolar,
+      nombreMaestro,
+      updatedRows
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: `¡Registros de ${nombreAlumno} eliminados y sincronizados con Google Sheets!`,
+      rows: updatedRows,
+    });
+  } catch (error) {
+    console.error('Error in DELETE /api/mejores-resultados:', error);
+    return NextResponse.json({ success: false, error: 'Error al procesar la eliminación' }, { status: 500 });
+  }
+}
+
