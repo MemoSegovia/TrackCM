@@ -11,7 +11,7 @@ export const PESTANIAS_GRUPOS_OFICIALES = [
   // Secundaria
   '7A', '7B', '7C', '7D', '8A', '8B', '8C', '8D', '9A', '9B', '9C',
   // Preparatoria
-  '10A', '10B', '10C', '10D', '10E', '11A', '11B', '11D', '12A', '12B', '12C', '12D',
+  '10A', '10B', '10C', '10D', '10E', '11A', '11B', '12A', '12B', '12C', '12D',
 ] as const;
 
 export function isStudentInGrupo(a: AlumnoInscrito, targetGrupo: string): boolean {
@@ -55,7 +55,7 @@ export function getNivelByGrupo(grupoName: string): string {
   if (['1A', '1B', '1C', '1D', '2A', '2B', '2C', '3A', '3B', '3C', '3D'].includes(g)) return 'Primaria Menor';
   if (['4A', '4B', '4C', '5A', '5B', '5C', '6A', '6B', '6C'].includes(g)) return 'Primaria Mayor';
   if (['7A', '7B', '7C', '7D', '8A', '8B', '8C', '8D', '9A', '9B', '9C'].includes(g)) return 'Secundaria';
-  if (['10A', '10B', '10C', '10D', '10E', '11A', '11B', '11D', '12A', '12B', '12C', '12D'].includes(g)) return 'Preparatoria';
+  if (['10A', '10B', '10C', '10D', '10E', '11A', '11B', '12A', '12B', '12C', '12D'].includes(g)) return 'Preparatoria';
   return 'General';
 }
 

@@ -937,7 +937,7 @@ export async function getGroupTabsRecordsBatch(): Promise<GroupTabMarkRecord[]> 
     '1A', '1B', '1C', '1D', '2A', '2B', '2C', '3A', '3B', '3C', '3D',
     '4A', '4B', '4C', '5A', '5B', '5C', '6A', '6B', '6C',
     '7A', '7B', '7C', '7D', '8A', '8B', '8C', '8D', '9A', '9B', '9C',
-    '10A', '10B', '10C', '10D', '10E', '11A', '11B', '11D', '12A', '12B', '12C', '12D',
+    '10A', '10B', '10C', '10D', '10E', '11A', '11B', '12A', '12B', '12C', '12D',
   ];
 
   try {
