@@ -1,5 +1,5 @@
 import { google } from 'googleapis';
-import { Usuario, AlumnoInscrito, RegistroAntropometrico, RegistroAtletismo, RegistroCualitativo } from './types';
+import { Usuario, AlumnoInscrito, RegistroAntropometrico, RegistroAtletismo, RegistroCualitativo, RolUsuario } from './types';
 import { getNivelByGrupo } from './mejoresResultados';
 
 const MOCK_USUARIOS: Usuario[] = [
@@ -997,6 +997,189 @@ export async function getGroupTabsRecordsBatch(): Promise<GroupTabMarkRecord[]> 
   } catch (err) {
     console.error('Error in getGroupTabsRecordsBatch:', err);
     return [];
+  }
+}
+
+export async function addUsuario(data: Usuario): Promise<boolean> {
+  const client = getGoogleSheetsClient();
+  if (!client) {
+    MOCK_USUARIOS.unshift(data);
+    return true;
+  }
+
+  try {
+    await client.sheets.spreadsheets.values.append({
+      spreadsheetId: client.spreadsheetId,
+      range: 'Usuarios!A:F',
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values: [[
+          data.ID_Usuario,
+          data.Nombre,
+          data.Correo,
+          data.Password || '',
+          data.Rol,
+          data.Nivel_Asignado || '',
+        ]],
+      },
+    });
+    return true;
+  } catch (err) {
+    console.error('Error adding Usuario to Sheets:', err);
+    MOCK_USUARIOS.unshift(data);
+    return true;
+  }
+}
+
+export async function updateUsuario(
+  idUsuario: string,
+  updates: { password?: string; rol?: RolUsuario; nivelAsignado?: string; nombre?: string; correo?: string }
+): Promise<boolean> {
+  const client = getGoogleSheetsClient();
+  if (!client) {
+    const user = MOCK_USUARIOS.find((u) => u.ID_Usuario === idUsuario || u.Correo.toLowerCase() === (updates.correo || '').toLowerCase());
+    if (user) {
+      if (updates.password !== undefined && updates.password !== '') user.Password = updates.password;
+      if (updates.rol !== undefined) user.Rol = updates.rol;
+      if (updates.nivelAsignado !== undefined) user.Nivel_Asignado = updates.nivelAsignado;
+      if (updates.nombre !== undefined) user.Nombre = updates.nombre;
+    }
+    return true;
+  }
+
+  try {
+    const res = await client.sheets.spreadsheets.values.get({
+      spreadsheetId: client.spreadsheetId,
+      range: 'Usuarios!A2:F',
+    });
+
+    const rows = res.data.values || [];
+    const targetIdx = rows.findIndex(
+      (r) =>
+        (idUsuario && r[0] && r[0].trim() === idUsuario.trim()) ||
+        (updates.correo && r[2] && r[2].trim().toLowerCase() === updates.correo.trim().toLowerCase())
+    );
+
+    if (targetIdx === -1) {
+      console.warn('User not found for update:', idUsuario);
+      return false;
+    }
+
+    const rowNum = targetIdx + 2;
+    const currentRow = rows[targetIdx];
+    const newNombre = updates.nombre !== undefined ? updates.nombre : (currentRow[1] || '');
+    const newCorreo = updates.correo !== undefined ? updates.correo : (currentRow[2] || '');
+    const newPassword = updates.password !== undefined && updates.password !== '' ? updates.password : (currentRow[3] || '');
+    const newRol = updates.rol !== undefined ? updates.rol : (currentRow[4] || 'Alumno');
+    const newNivel = updates.nivelAsignado !== undefined ? updates.nivelAsignado : (currentRow[5] || '');
+
+    await client.sheets.spreadsheets.values.update({
+      spreadsheetId: client.spreadsheetId,
+      range: `Usuarios!B${rowNum}:F${rowNum}`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values: [[newNombre, newCorreo, newPassword, newRol, newNivel]],
+      },
+    });
+
+    return true;
+  } catch (err) {
+    console.error('Error updating Usuario in Sheets:', err);
+    return false;
+  }
+}
+
+export async function addAlumnoInscrito(data: AlumnoInscrito): Promise<boolean> {
+  const client = getGoogleSheetsClient();
+  if (!client) {
+    MOCK_ALUMNOS.unshift(data);
+    return true;
+  }
+
+  try {
+    await client.sheets.spreadsheets.values.append({
+      spreadsheetId: client.spreadsheetId,
+      range: 'Alumnos_Inscritos!A:H',
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values: [[
+          data.ID_Alumno,
+          data.Nombre_Completo,
+          data.Fecha_Nacimiento || '',
+          data.Genero || 'M',
+          data.Nivel || '',
+          data.Grado || '',
+          data.Grupo || '',
+          data.Ciclo_Escolar || '2026-2027',
+        ]],
+      },
+    });
+    return true;
+  } catch (err) {
+    console.error('Error adding Alumno_Inscrito to Sheets:', err);
+    MOCK_ALUMNOS.unshift(data);
+    return true;
+  }
+}
+
+export async function updateAlumnoGradeGroup(
+  idAlumno: string,
+  updates: { nivel?: string; grado?: string; grupo?: string; nombreCompleto?: string; cicloEscolar?: string }
+): Promise<boolean> {
+  const client = getGoogleSheetsClient();
+  if (!client) {
+    const st = MOCK_ALUMNOS.find((a) => a.ID_Alumno === idAlumno);
+    if (st) {
+      if (updates.nivel) st.Nivel = updates.nivel;
+      if (updates.grado) st.Grado = updates.grado;
+      if (updates.grupo) st.Grupo = updates.grupo;
+      if (updates.nombreCompleto) st.Nombre_Completo = updates.nombreCompleto;
+      if (updates.cicloEscolar) st.Ciclo_Escolar = updates.cicloEscolar;
+    }
+    return true;
+  }
+
+  try {
+    const res = await client.sheets.spreadsheets.values.get({
+      spreadsheetId: client.spreadsheetId,
+      range: 'Alumnos_Inscritos!A2:H',
+    });
+
+    const rows = res.data.values || [];
+    const targetIdx = rows.findIndex(
+      (r) =>
+        (idAlumno && r[0] && r[0].trim().toLowerCase() === idAlumno.trim().toLowerCase()) ||
+        (updates.nombreCompleto && r[1] && r[1].trim().toLowerCase() === updates.nombreCompleto.trim().toLowerCase())
+    );
+
+    if (targetIdx === -1) {
+      console.warn('Student not found for grade/group update:', idAlumno);
+      return false;
+    }
+
+    const rowNum = targetIdx + 2;
+    const currentRow = rows[targetIdx];
+    const newNombre = updates.nombreCompleto !== undefined ? updates.nombreCompleto : (currentRow[1] || '');
+    const newFechaNac = currentRow[2] || '';
+    const newGenero = currentRow[3] || 'M';
+    const newNivel = updates.nivel !== undefined ? updates.nivel : (currentRow[4] || '');
+    const newGrado = updates.grado !== undefined ? updates.grado : (currentRow[5] || '');
+    const newGrupo = updates.grupo !== undefined ? updates.grupo : (currentRow[6] || '');
+    const newCiclo = updates.cicloEscolar !== undefined ? updates.cicloEscolar : (currentRow[7] || '2026-2027');
+
+    await client.sheets.spreadsheets.values.update({
+      spreadsheetId: client.spreadsheetId,
+      range: `Alumnos_Inscritos!B${rowNum}:H${rowNum}`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values: [[newNombre, newFechaNac, newGenero, newNivel, newGrado, newGrupo, newCiclo]],
+      },
+    });
+
+    return true;
+  } catch (err) {
+    console.error('Error updating Alumno grade/group in Sheets:', err);
+    return false;
   }
 }
 

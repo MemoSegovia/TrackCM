@@ -90,10 +90,16 @@ export interface AdminTeacherActivity {
   idMaestro: string;
   nombreMaestro: string;
   nivelAsignado?: string;
+  totalAlumnosNivel?: number;
   totalRegistros: number;
+  esperadosTotal?: number;
   totalAntropometricos: number;
+  esperadosAntropometricos?: number;
   totalAtletismo: number;
+  esperadosAtletismo?: number;
   totalCualitativos: number;
+  esperadosCualitativos?: number;
+  porcentajeAvance?: number;
 }
 
 export interface ConnectedUserItem {

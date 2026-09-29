@@ -14,6 +14,59 @@ export const PESTANIAS_GRUPOS_OFICIALES = [
   '10A', '10B', '10C', '10D', '10E', '11A', '11B', '12A', '12B', '12C', '12D',
 ] as const;
 
+const CUSTOM_TABS_KEY = 'trackcm_custom_group_tabs';
+
+export function getCustomGroupTabs(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(CUSTOM_TABS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+export function addCustomGroupTab(tabName: string): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const clean = (tabName || '').trim().toUpperCase();
+    if (!clean) return false;
+    const current = getCustomGroupTabs();
+    if (!current.includes(clean) && !(PESTANIAS_GRUPOS_OFICIALES as readonly string[]).includes(clean)) {
+      current.push(clean);
+      localStorage.setItem(CUSTOM_TABS_KEY, JSON.stringify(current));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('trackcm_grouptabs_updated'));
+      }
+      return true;
+    }
+    return false;
+  } catch (e) {
+    return false;
+  }
+}
+
+export function deleteCustomGroupTab(tabName: string): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const clean = (tabName || '').trim().toUpperCase();
+    const current = getCustomGroupTabs().filter((t) => t !== clean);
+    localStorage.setItem(CUSTOM_TABS_KEY, JSON.stringify(current));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('trackcm_grouptabs_updated'));
+    }
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+export function getAllGroupTabs(): string[] {
+  const custom = getCustomGroupTabs();
+  const set = new Set([...PESTANIAS_GRUPOS_OFICIALES, ...custom]);
+  return Array.from(set);
+}
+
 export function parseGrupoTab(tab: string): { nivel: string; grado: string; grupo: string } {
   const t = (tab || '').trim().toUpperCase();
   const nivel = getNivelByGrupo(t);

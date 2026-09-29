@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PESTANIAS_GRUPOS_OFICIALES, getNivelByGrupo, isStudentInGrupo, StudentBestMarksRow, isTabAllowedForUser } from '@/lib/mejoresResultados';
+import { PESTANIAS_GRUPOS_OFICIALES, getNivelByGrupo, isStudentInGrupo, StudentBestMarksRow, isTabAllowedForUser, getAllGroupTabs } from '@/lib/mejoresResultados';
 import { AlumnoInscrito, UserSession } from '@/lib/types';
 import { Table, RefreshCw, FileText, CheckCircle, Search, Layers, Download, FileSpreadsheet, Pencil, Trash2, X, Save, AlertTriangle } from 'lucide-react';
 import { exportElementToPdf } from '@/lib/exportPdf';
@@ -48,11 +48,21 @@ export default function BestResultsTable({ user, cicloEscolar = '2026-2027' }: B
   const rolLower = user?.rol?.toLowerCase() || '';
   const isAdmin = rolLower === 'administrador' || rolLower === 'admin';
 
+  const [allTabsList, setAllTabsList] = useState<string[]>(getAllGroupTabs());
+
+  useEffect(() => {
+    const handleTabsUpdate = () => setAllTabsList(getAllGroupTabs());
+    if (typeof window !== 'undefined') {
+      window.addEventListener('trackcm_grouptabs_updated', handleTabsUpdate);
+      return () => window.removeEventListener('trackcm_grouptabs_updated', handleTabsUpdate);
+    }
+  }, []);
+
   // Calculate tabs allowed for current user (admins see all)
-  const allowedTabsList = (PESTANIAS_GRUPOS_OFICIALES as readonly string[]).filter((g) =>
+  const allowedTabsList = allTabsList.filter((g) =>
     isTabAllowedForUser(g, user, userLevelsByEmail)
   );
-  const availableTabs: string[] = allowedTabsList.length > 0 ? allowedTabsList : Array.from(PESTANIAS_GRUPOS_OFICIALES);
+  const availableTabs: string[] = allowedTabsList.length > 0 ? allowedTabsList : allTabsList;
 
   // Load all students & user levels map
   useEffect(() => {
