@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
-import { Dumbbell, Lock, Mail, ArrowRight, AlertCircle, Calendar } from 'lucide-react';
+import { Dumbbell, Lock, Mail, ArrowRight, AlertCircle, Calendar, Loader2 } from 'lucide-react';
 import { getActiveCicloEscolar, DEFAULT_ACTIVE_CICLO } from '@/lib/ciclosEscolares';
 
 export default function LoginPage() {
@@ -140,10 +140,33 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 rounded-xl font-bold text-sm bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+              className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 overflow-hidden relative
+                ${loading
+                  ? 'bg-slate-800 border border-emerald-500/40 text-emerald-300 cursor-not-allowed shadow-inner shadow-emerald-900/20'
+                  : 'bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40'}`}
             >
-              {loading ? 'Verificando en Google Sheets...' : 'Entrar a la Plataforma'}
-              <ArrowRight className="w-4 h-4" />
+              {loading ? (
+                <>
+                  {/* Animated shimmer bar */}
+                  <span className="absolute inset-0 overflow-hidden rounded-xl">
+                    <span className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-emerald-500/10 to-transparent" />
+                  </span>
+                  <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                  <span className="flex items-center gap-1">
+                    <span className="text-emerald-300 font-semibold tracking-wide text-sm">Accediendo</span>
+                    <span className="flex gap-0.5 items-end pb-0.5">
+                      <span className="w-1 h-1 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-1 h-1 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-1 h-1 rounded-full bg-emerald-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </span>
+                  </span>
+                </>
+              ) : (
+                <>
+                  Entrar a la Plataforma
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
         </div>
