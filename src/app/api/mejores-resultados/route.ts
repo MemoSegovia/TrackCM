@@ -17,6 +17,7 @@ import {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+    const fetchAll = searchParams.get('all') === 'true';
     const targetGrupo = searchParams.get('grupo') || '1A';
     const cicloEscolar = searchParams.get('ciclo') || '2026-2027';
 
@@ -25,6 +26,16 @@ export async function GET(request: Request) {
       getRegistrosAtletismo(),
       getRegistrosCualitativos(),
     ]);
+
+    if (fetchAll) {
+      return NextResponse.json({
+        success: true,
+        alumnos,
+        atletismo,
+        cualitativo,
+        cicloEscolar,
+      });
+    }
 
     // Filter students for the requested group
     const groupStudents = alumnos.filter((a) => isStudentInGrupo(a, targetGrupo));

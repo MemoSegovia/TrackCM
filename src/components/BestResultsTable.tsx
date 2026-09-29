@@ -5,6 +5,7 @@ import { PESTANIAS_GRUPOS_OFICIALES, getNivelByGrupo, isStudentInGrupo, StudentB
 import { AlumnoInscrito, UserSession } from '@/lib/types';
 import { Table, RefreshCw, FileText, CheckCircle, Search, Layers, Download, FileSpreadsheet, Pencil, Trash2, X, Save, AlertTriangle } from 'lucide-react';
 import { exportElementToPdf } from '@/lib/exportPdf';
+import { exportAllGroupsToExcel, exportSingleGroupToExcel } from '@/lib/exportExcel';
 
 interface BestResultsTableProps {
   user: UserSession | null;
@@ -187,6 +188,42 @@ export default function BestResultsTable({ user, cicloEscolar = '2026-2027' }: B
     }
   };
 
+  const [exportingExcel, setExportingExcel] = useState<boolean>(false);
+
+  const handleExportAllExcel = async () => {
+    try {
+      setExportingExcel(true);
+      setMsg(null);
+      const ok = await exportAllGroupsToExcel(cicloEscolar, allTabsList);
+      if (ok) {
+        setMsg({
+          type: 'success',
+          text: '¡Archivo Excel generado exitosamente con todas las pestañas de grupo!',
+        });
+      } else {
+        setMsg({ type: 'error', text: 'Error al generar el archivo de Excel' });
+      }
+    } catch (err) {
+      console.error(err);
+      setMsg({ type: 'error', text: 'Error de red al exportar a Excel' });
+    } finally {
+      setExportingExcel(false);
+    }
+  };
+
+  const handleExportSingleExcel = () => {
+    try {
+      exportSingleGroupToExcel(selectedGrupo, rows, cicloEscolar);
+      setMsg({
+        type: 'success',
+        text: `¡Excel de la pestaña "${selectedGrupo}" descargado exitosamente!`,
+      });
+    } catch (err) {
+      console.error(err);
+      setMsg({ type: 'error', text: 'Error al exportar Excel de la pestaña' });
+    }
+  };
+
   const exportToPdf = async () => {
     await exportElementToPdf(
       'printable-mejores-resultados',
@@ -292,31 +329,53 @@ export default function BestResultsTable({ user, cicloEscolar = '2026-2027' }: B
           <div>
             <h3 className="text-xl font-black text-white">Tabla de Mejores Resultados Consolidados</h3>
             <p className="text-xs text-slate-400">
-              Visualización y sincronización por pestaña de grupo (1A a 12D)
+              Visualización, exportación en Excel por grupo y sincronización por pestaña
             </p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+          {isAdmin && (
+            <button
+              onClick={handleExportAllExcel}
+              disabled={exportingExcel}
+              className="py-3 px-4 rounded-2xl font-black text-xs bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95 disabled:opacity-40"
+              title="Descargar archivo Excel con pestañas individuales para todos los grupos"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-slate-950" />
+              {exportingExcel ? 'Generando Excel...' : 'Exportar Excel (Todos los Grupos)'}
+            </button>
+          )}
+
+          <button
+            onClick={handleExportSingleExcel}
+            className="py-3 px-4 rounded-2xl font-bold text-xs bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 transition-all flex items-center gap-2 shadow-md active:scale-95"
+            title={`Descargar Excel de la pestaña ${selectedGrupo}`}
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-400" /> Exportar Excel {selectedGrupo}
+          </button>
+
           <button
             onClick={handleSyncToSheets}
             disabled={syncing}
-            className="flex-1 sm:flex-none py-3 px-4 rounded-2xl font-black text-xs bg-emerald-500 hover:bg-emerald-600 text-slate-950 transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95 disabled:opacity-40"
+            className="flex-1 sm:flex-none py-3 px-4 rounded-2xl font-black text-xs bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95 disabled:opacity-40"
             title="Sincronizar pestaña seleccionada a Google Sheets"
           >
             <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
             {syncing ? 'Sincronizando...' : `Sincronizar ${selectedGrupo}`}
           </button>
 
-          <button
-            onClick={handleSyncAllToSheets}
-            disabled={syncing}
-            className="flex-1 sm:flex-none py-3 px-4 rounded-2xl font-black text-xs bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95 disabled:opacity-40"
-            title="Crear y actualizar todas las pestañas de grupos con alumnos en Google Sheets"
-          >
-            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-            {syncing ? 'Sincronizando...' : 'Sincronizar Todos los Grupos'}
-          </button>
+          {isAdmin && (
+            <button
+              onClick={handleSyncAllToSheets}
+              disabled={syncing}
+              className="flex-1 sm:flex-none py-3 px-4 rounded-2xl font-black text-xs bg-indigo-500 hover:bg-indigo-400 text-white transition-all shadow-lg flex items-center justify-center gap-2 active:scale-95 disabled:opacity-40"
+              title="Crear y actualizar todas las pestañas de grupos con alumnos en Google Sheets"
+            >
+              <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? 'Sincronizando...' : 'Sincronizar Sheets'}
+            </button>
+          )}
 
           <button
             onClick={exportToPdf}
