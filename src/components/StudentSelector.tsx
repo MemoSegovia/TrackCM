@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { AlumnoInscrito, UserSession, NIVELES_ESCOLARES_OFICIALES } from '@/lib/types';
 import { Filter, User, Layers, GraduationCap, Calendar, CheckCircle2, Lock, WifiOff } from 'lucide-react';
 import { saveStudentsCache, getStudentsCache } from '@/lib/offlineManager';
-import { getAllCiclosEscolares } from '@/lib/ciclosEscolares';
+import { getAllCiclosEscolares, getActiveCicloEscolar } from '@/lib/ciclosEscolares';
 
 interface StudentSelectorProps {
   onSelectStudent: (
@@ -23,8 +23,12 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
   const [userLevelsByEmail, setUserLevelsByEmail] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState<boolean>(true);
 
+  // Role check — admins can change ciclo, others use the active one
+  const userRoleForCiclo = user?.rol?.toLowerCase() || '';
+  const isAdminUser = userRoleForCiclo === 'administrador' || userRoleForCiclo === 'admin';
+
   // Selector state
-  const [selectedCiclo, setSelectedCiclo] = useState<string>('2026-2027');
+  const [selectedCiclo, setSelectedCiclo] = useState<string>(getActiveCicloEscolar());
   const [selectedNivel, setSelectedNivel] = useState<string>('');
   const [selectedGrado, setSelectedGrado] = useState<string>('');
   const [selectedGrupo, setSelectedGrupo] = useState<string>('');
@@ -119,15 +123,26 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
     const handleCiclosUpdate = () => {
       setCiclos(getAllCiclosEscolares());
     };
+    const handleActiveCicloChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.ciclo) {
+        // Non-admins always follow the active ciclo set by admin
+        if (!isAdminUser) {
+          setSelectedCiclo(detail.ciclo);
+        }
+      }
+    };
     if (typeof window !== 'undefined') {
       window.addEventListener('trackcm_ciclos_updated', handleCiclosUpdate);
+      window.addEventListener('trackcm_active_ciclo_changed', handleActiveCicloChange);
     }
     return () => {
       if (typeof window !== 'undefined') {
         window.removeEventListener('trackcm_ciclos_updated', handleCiclosUpdate);
+        window.removeEventListener('trackcm_active_ciclo_changed', handleActiveCicloChange);
       }
     };
-  }, []);
+  }, [isAdminUser]);
 
   useEffect(() => {
     async function loadData() {
@@ -328,17 +343,26 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
           <label className="block text-xs font-semibold text-slate-400 mb-1 flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-slate-400" /> Ciclo Escolar
           </label>
-          <select
-            value={selectedCiclo}
-            onChange={(e) => setSelectedCiclo(e.target.value)}
-            className="w-full bg-slate-800/80 text-slate-100 text-sm rounded-xl px-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 transition-colors"
-          >
-            {ciclos.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+          {isAdminUser ? (
+            // Admin: full selector to change ciclo
+            <select
+              value={selectedCiclo}
+              onChange={(e) => setSelectedCiclo(e.target.value)}
+              className="w-full bg-slate-800/80 text-slate-100 text-sm rounded-xl px-3 py-2.5 border border-slate-700 focus:outline-none focus:border-emerald-500 transition-colors"
+            >
+              {ciclos.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          ) : (
+            // Teacher / Student: read-only badge, locked to active ciclo
+            <div className="w-full bg-slate-800/60 border border-emerald-500/30 rounded-xl px-3 py-2.5 flex items-center gap-2">
+              <Lock className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+              <span className="text-sm font-bold font-mono text-emerald-300">{selectedCiclo}</span>
+            </div>
+          )}
         </div>
 
         {/* Nivel Escolar */}

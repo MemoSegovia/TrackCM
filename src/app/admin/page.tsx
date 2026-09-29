@@ -16,6 +16,8 @@ import {
 } from '@/lib/mejoresResultados';
 import {
   getAllCiclosEscolares,
+  getActiveCicloEscolar,
+  setActiveCicloEscolar,
   addCustomCicloEscolar,
   deleteCustomCicloEscolar,
 } from '@/lib/ciclosEscolares';
@@ -53,17 +55,25 @@ export default function AdminPage() {
   const [loading, setLoading] = useState<boolean>(true);
 
   // Active Ciclo Escolar selector & management
-  const [cicloEscolar, setCicloEscolar] = useState<string>('2026-2027');
+  const [cicloEscolar, setCicloEscolarState] = useState<string>('2026-2027');
   const [availableCiclos, setAvailableCiclos] = useState<string[]>(getAllCiclosEscolares());
   const [showAddCicloModal, setShowAddCicloModal] = useState<boolean>(false);
   const [newCicloInput, setNewCicloInput] = useState<string>('');
   const [cicloMsg, setCicloMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Helper: change active ciclo and broadcast to all roles
+  const setCicloEscolar = (ciclo: string) => {
+    setCicloEscolarState(ciclo);
+    setActiveCicloEscolar(ciclo);
+  };
 
   useEffect(() => {
     const handleCiclosUpdate = () => {
       setAvailableCiclos(getAllCiclosEscolares());
     };
     if (typeof window !== 'undefined') {
+      // Initialize with persisted active ciclo
+      setCicloEscolarState(getActiveCicloEscolar());
       window.addEventListener('trackcm_ciclos_updated', handleCiclosUpdate);
       return () => window.removeEventListener('trackcm_ciclos_updated', handleCiclosUpdate);
     }

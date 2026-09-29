@@ -1,5 +1,26 @@
 const CUSTOM_CICLOS_KEY = 'trackcm_custom_ciclos_escolares';
+const ACTIVE_CICLO_KEY = 'trackcm_active_ciclo';
 export const DEFAULT_CICLOS = ['2026-2027', '2025-2026'];
+export const DEFAULT_ACTIVE_CICLO = '2026-2027';
+
+export function getActiveCicloEscolar(): string {
+  if (typeof window === 'undefined') return DEFAULT_ACTIVE_CICLO;
+  try {
+    return localStorage.getItem(ACTIVE_CICLO_KEY) || DEFAULT_ACTIVE_CICLO;
+  } catch (e) {
+    return DEFAULT_ACTIVE_CICLO;
+  }
+}
+
+export function setActiveCicloEscolar(ciclo: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(ACTIVE_CICLO_KEY, ciclo.trim());
+    window.dispatchEvent(new CustomEvent('trackcm_active_ciclo_changed', { detail: { ciclo: ciclo.trim() } }));
+  } catch (e) {
+    // ignore
+  }
+}
 
 export function getCustomCiclosEscolares(): string[] {
   if (typeof window === 'undefined') return [];
@@ -15,8 +36,6 @@ export function getAllCiclosEscolares(extraCiclos: string[] = []): string[] {
   const custom = getCustomCiclosEscolares();
   const set = new Set([...DEFAULT_CICLOS, ...custom, ...extraCiclos]);
   const arr = Array.from(set).filter(Boolean);
-
-  // Sort reverse chronologically (e.g. 2028-2029, 2027-2028, 2026-2027, 2025-2026)
   arr.sort((a, b) => b.localeCompare(a));
   return arr;
 }

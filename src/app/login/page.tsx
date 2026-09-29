@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
-import { Dumbbell, Lock, Mail, ArrowRight, ShieldCheck, UserCheck, AlertCircle, Calendar } from 'lucide-react';
-import { getAllCiclosEscolares } from '@/lib/ciclosEscolares';
+import { Dumbbell, Lock, Mail, ArrowRight, AlertCircle, Calendar } from 'lucide-react';
+import { getActiveCicloEscolar, DEFAULT_ACTIVE_CICLO } from '@/lib/ciclosEscolares';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,22 +12,21 @@ export default function LoginPage() {
   const [password, setPassword] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
-  const [ciclosList, setCiclosList] = useState<string[]>(getAllCiclosEscolares());
-  const [selectedCiclo, setSelectedCiclo] = useState<string>('2026-2027');
+  const [activeCiclo, setActiveCiclo] = useState<string>(DEFAULT_ACTIVE_CICLO);
 
   useEffect(() => {
-    const handleCiclosUpdate = () => {
-      const updated = getAllCiclosEscolares();
-      setCiclosList(updated);
-      if (updated.length > 0 && !updated.includes(selectedCiclo)) {
-        setSelectedCiclo(updated[0]);
-      }
+    // Read the active ciclo set by the Admin
+    setActiveCiclo(getActiveCicloEscolar());
+
+    const handleCicloChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.ciclo) setActiveCiclo(detail.ciclo);
     };
     if (typeof window !== 'undefined') {
-      window.addEventListener('trackcm_ciclos_updated', handleCiclosUpdate);
-      return () => window.removeEventListener('trackcm_ciclos_updated', handleCiclosUpdate);
+      window.addEventListener('trackcm_active_ciclo_changed', handleCicloChange);
+      return () => window.removeEventListener('trackcm_active_ciclo_changed', handleCicloChange);
     }
-  }, [selectedCiclo]);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +50,8 @@ export default function LoginPage() {
       if (data.success && data.user) {
         if (typeof window !== 'undefined') {
           localStorage.setItem('trackcm_user', JSON.stringify(data.user));
-          localStorage.setItem('trackcm_active_ciclo', selectedCiclo);
+          // Always persist the admin-set active ciclo for this session
+          localStorage.setItem('trackcm_active_ciclo', activeCiclo);
         }
 
         const rolLower = data.user.rol?.toLowerCase() || '';
@@ -73,11 +73,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickDemo = (demoEmail: string) => {
-    setEmail(demoEmail);
-    setPassword('123');
-  };
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       <Navbar />
@@ -95,22 +90,12 @@ export default function LoginPage() {
             <h2 className="text-2xl font-black text-white tracking-tight">Iniciar Sesión en TrackCM</h2>
             <p className="text-xs text-slate-400">Colegio Mexicano • Sistema de Educación Física</p>
 
-            {/* Active Ciclo Escolar Badge & Selector on Login */}
+            {/* Active Ciclo Escolar — Read-only badge */}
             <div className="pt-2 flex items-center justify-center">
-              <div className="inline-flex items-center gap-2 bg-slate-950 border border-slate-800 px-3.5 py-1.5 rounded-full text-xs font-bold text-emerald-400 shadow-inner">
+              <div className="inline-flex items-center gap-2 bg-slate-950 border border-emerald-500/30 px-4 py-1.5 rounded-full shadow-inner">
                 <Calendar className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-slate-400 font-semibold">Ciclo Escolar:</span>
-                <select
-                  value={selectedCiclo}
-                  onChange={(e) => setSelectedCiclo(e.target.value)}
-                  className="bg-slate-900 text-emerald-300 font-mono font-extrabold text-xs rounded-lg px-2 py-0.5 border border-slate-700 focus:outline-none focus:border-emerald-400"
-                >
-                  {ciclosList.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
+                <span className="text-xs text-slate-400 font-semibold">Ciclo Escolar:</span>
+                <span className="text-xs font-black font-mono text-emerald-300 tracking-wide">{activeCiclo}</span>
               </div>
             </div>
           </div>
