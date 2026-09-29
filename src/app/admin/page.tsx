@@ -10,6 +10,7 @@ import {
   getCustomGroupTabs,
   addCustomGroupTab,
   deleteCustomGroupTab,
+  updateCustomGroupTab,
   getAllGroupTabs,
   PESTANIAS_GRUPOS_OFICIALES,
 } from '@/lib/mejoresResultados';
@@ -29,6 +30,7 @@ import {
   UserCog,
   Lock,
   Plus,
+  Pencil,
   Trash2,
   CheckCircle,
   AlertTriangle,
@@ -195,6 +197,31 @@ export default function AdminPage() {
     setCustomTabs(getCustomGroupTabs());
     setTabMsg({ type: 'success', text: `Pestaña "${tab}" eliminada.` });
     setTimeout(() => setTabMsg(null), 3000);
+  };
+
+  // Handle Group Tab Renaming / Editing
+  const [editingGroupTab, setEditingGroupTab] = useState<string | null>(null);
+  const [editTabNameInput, setEditTabNameInput] = useState<string>('');
+
+  const handleOpenEditTab = (tab: string) => {
+    setEditingGroupTab(tab);
+    setEditTabNameInput(tab);
+  };
+
+  const handleSaveEditedTab = () => {
+    if (!editingGroupTab || !editTabNameInput.trim()) return;
+    const ok = updateCustomGroupTab(editingGroupTab, editTabNameInput);
+    if (ok) {
+      setCustomTabs(getCustomGroupTabs());
+      setTabMsg({
+        type: 'success',
+        text: `¡Nombre de pestaña "${editingGroupTab}" actualizado exitosamente a "${editTabNameInput.trim().toUpperCase()}"!`,
+      });
+      setEditingGroupTab(null);
+    } else {
+      setTabMsg({ type: 'error', text: 'Error al actualizar nombre de la pestaña' });
+    }
+    setTimeout(() => setTabMsg(null), 3500);
   };
 
   // Handle User Create / Edit Password & Role
@@ -666,13 +693,20 @@ export default function AdminPage() {
               <div className="flex flex-wrap gap-2 p-3 bg-slate-950 rounded-2xl border border-slate-800 max-h-72 overflow-y-auto">
                 {/* Official tabs */}
                 {PESTANIAS_GRUPOS_OFICIALES.map((g) => (
-                  <span
+                  <div
                     key={g}
                     className="px-3 py-1.5 rounded-xl text-xs font-black bg-slate-900 text-slate-300 border border-slate-800 flex items-center gap-1.5"
                   >
                     <span>{g}</span>
                     <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">Oficial</span>
-                  </span>
+                    <button
+                      onClick={() => handleOpenEditTab(g)}
+                      className="text-slate-400 hover:text-amber-400 transition-colors p-0.5"
+                      title="Editar nombre de esta pestaña"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 ))}
                 {/* Custom admin added tabs */}
                 {customTabs.map((ct) => (
@@ -682,6 +716,13 @@ export default function AdminPage() {
                   >
                     <span>{ct}</span>
                     <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">Admin</span>
+                    <button
+                      onClick={() => handleOpenEditTab(ct)}
+                      className="text-emerald-400 hover:text-amber-400 transition-colors p-0.5"
+                      title="Editar nombre de esta pestaña"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
                     <button
                       onClick={() => handleDeleteCustomGroupTab(ct)}
                       className="text-emerald-400 hover:text-rose-400 transition-colors p-0.5"
@@ -1249,6 +1290,57 @@ export default function AdminPage() {
                   className="px-5 py-2 rounded-xl text-xs font-black bg-cyan-500 hover:bg-cyan-400 text-slate-950 flex items-center gap-1.5"
                 >
                   <Save className="w-4 h-4" /> {studentActionLoading ? 'Guardando...' : 'Guardar Grado/Grupo'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: Edit Group Tab Name */}
+        {editingGroupTab && (
+          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h4 className="text-base font-black text-white flex items-center gap-2">
+                  <Pencil className="w-5 h-5 text-amber-400" /> Editar Nombre de Pestaña de Grupo
+                </h4>
+                <button onClick={() => setEditingGroupTab(null)} className="text-slate-400 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">Nombre Actual de Pestaña</label>
+                  <p className="font-mono text-sm font-bold text-amber-400 bg-slate-950 px-3 py-2 rounded-xl border border-slate-800">
+                    {editingGroupTab}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">Nuevo Nombre de la Pestaña</label>
+                  <input
+                    type="text"
+                    value={editTabNameInput}
+                    onChange={(e) => setEditTabNameInput(e.target.value)}
+                    placeholder="Ej. 1E, Kinder 2, 7E..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white font-mono uppercase focus:border-amber-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 border-t border-slate-800 pt-3">
+                <button
+                  onClick={() => setEditingGroupTab(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveEditedTab}
+                  className="px-5 py-2 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center gap-1.5 active:scale-95"
+                >
+                  <Save className="w-4 h-4" /> Guardar Nombre
                 </button>
               </div>
             </div>

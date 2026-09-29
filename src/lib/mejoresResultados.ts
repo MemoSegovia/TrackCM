@@ -61,6 +61,34 @@ export function deleteCustomGroupTab(tabName: string): boolean {
   }
 }
 
+export function updateCustomGroupTab(oldName: string, newName: string): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const cleanOld = (oldName || '').trim().toUpperCase();
+    const cleanNew = (newName || '').trim().toUpperCase();
+    if (!cleanOld || !cleanNew) return false;
+
+    const current = getCustomGroupTabs();
+    const idx = current.indexOf(cleanOld);
+    if (idx !== -1) {
+      current[idx] = cleanNew;
+      localStorage.setItem(CUSTOM_TABS_KEY, JSON.stringify(current));
+    } else {
+      if (!current.includes(cleanNew)) {
+        current.push(cleanNew);
+        localStorage.setItem(CUSTOM_TABS_KEY, JSON.stringify(current));
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('trackcm_grouptabs_updated'));
+    }
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 export function getAllGroupTabs(): string[] {
   const custom = getCustomGroupTabs();
   const set = new Set([...PESTANIAS_GRUPOS_OFICIALES, ...custom]);
