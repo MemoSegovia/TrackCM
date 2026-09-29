@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { AlumnoInscrito, UserSession, NIVELES_ESCOLARES_OFICIALES } from '@/lib/types';
 import { Filter, User, Layers, GraduationCap, Calendar, CheckCircle2, Lock, WifiOff } from 'lucide-react';
 import { saveStudentsCache, getStudentsCache } from '@/lib/offlineManager';
+import { getAllCiclosEscolares } from '@/lib/ciclosEscolares';
 
 interface StudentSelectorProps {
   onSelectStudent: (
@@ -115,6 +116,20 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
   const [isOfflineData, setIsOfflineData] = useState<boolean>(false);
 
   useEffect(() => {
+    const handleCiclosUpdate = () => {
+      setCiclos(getAllCiclosEscolares());
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('trackcm_ciclos_updated', handleCiclosUpdate);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('trackcm_ciclos_updated', handleCiclosUpdate);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     async function loadData() {
       try {
         setLoading(true);
@@ -127,10 +142,12 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
             setUserLevelsByEmail(data.userLevelsByEmail);
           }
           saveStudentsCache(loadedAlumnos, data.userLevelsByEmail);
-          setCiclos(data.filters?.ciclos || ['2026-2027']);
 
-          if (data.filters?.ciclos?.length > 0) {
-            setSelectedCiclo(data.filters.ciclos[0]);
+          const computedCiclos = getAllCiclosEscolares(data.filters?.ciclos || []);
+          setCiclos(computedCiclos);
+
+          if (computedCiclos.length > 0 && !selectedCiclo) {
+            setSelectedCiclo(computedCiclos[0]);
           }
           setIsOfflineData(false);
         } else {
@@ -145,9 +162,10 @@ export default function StudentSelector({ onSelectStudent, user, selectedStudent
             setUserLevelsByEmail(cached.userLevelsByEmail);
           }
           const uniqueCiclos = Array.from(new Set(cached.alumnos.map((a) => a.Ciclo_Escolar))).filter(Boolean);
-          if (uniqueCiclos.length > 0) {
-            setCiclos(uniqueCiclos);
-            setSelectedCiclo(uniqueCiclos[0]);
+          const computedCiclos = getAllCiclosEscolares(uniqueCiclos);
+          setCiclos(computedCiclos);
+          if (computedCiclos.length > 0 && !selectedCiclo) {
+            setSelectedCiclo(computedCiclos[0]);
           }
           setIsOfflineData(true);
         }

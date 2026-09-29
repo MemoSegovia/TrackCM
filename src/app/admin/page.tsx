@@ -15,6 +15,11 @@ import {
   PESTANIAS_GRUPOS_OFICIALES,
 } from '@/lib/mejoresResultados';
 import {
+  getAllCiclosEscolares,
+  addCustomCicloEscolar,
+  deleteCustomCicloEscolar,
+} from '@/lib/ciclosEscolares';
+import {
   ShieldCheck,
   Users,
   UserCheck,
@@ -47,9 +52,57 @@ export default function AdminPage() {
   const [metrics, setMetrics] = useState<AdminMetrics | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Active Ciclo Escolar selector
+  // Active Ciclo Escolar selector & management
   const [cicloEscolar, setCicloEscolar] = useState<string>('2026-2027');
-  const [availableCiclos, setAvailableCiclos] = useState<string[]>(['2026-2027', '2025-2026']);
+  const [availableCiclos, setAvailableCiclos] = useState<string[]>(getAllCiclosEscolares());
+  const [showAddCicloModal, setShowAddCicloModal] = useState<boolean>(false);
+  const [newCicloInput, setNewCicloInput] = useState<string>('');
+  const [cicloMsg, setCicloMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  useEffect(() => {
+    const handleCiclosUpdate = () => {
+      setAvailableCiclos(getAllCiclosEscolares());
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('trackcm_ciclos_updated', handleCiclosUpdate);
+      return () => window.removeEventListener('trackcm_ciclos_updated', handleCiclosUpdate);
+    }
+  }, []);
+
+  const handleCreateCicloEscolar = async () => {
+    const clean = (newCicloInput || '').trim();
+    if (!clean) {
+      setCicloMsg({ type: 'error', text: 'Por favor ingrese el nombre del ciclo escolar (ej. 2027-2028)' });
+      return;
+    }
+
+    const ok = addCustomCicloEscolar(clean);
+    if (ok) {
+      try {
+        await fetch('/api/ciclos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cicloEscolar: clean }),
+        });
+      } catch (e) {
+        console.error(e);
+      }
+
+      const updatedList = getAllCiclosEscolares();
+      setAvailableCiclos(updatedList);
+      setCicloEscolar(clean);
+      setCicloMsg({
+        type: 'success',
+        text: `¡Ciclo Escolar "${clean}" agregado exitosamente! Disponible para Maestros, Alumnos y Login.`,
+      });
+      setShowAddCicloModal(false);
+      setNewCicloInput('');
+      loadMetrics(clean);
+    } else {
+      setCicloMsg({ type: 'error', text: 'Ciclo escolar duplicado o no válido' });
+    }
+    setTimeout(() => setCicloMsg(null), 4000);
+  };
 
   // Admin View Section Navigation
   const [activeSection, setActiveSection] = useState<'monitoring' | 'group-tabs' | 'users' | 'students'>('monitoring');
@@ -399,6 +452,13 @@ export default function AdminPage() {
                   </option>
                 ))}
               </select>
+              <button
+                onClick={() => setShowAddCicloModal(true)}
+                className="ml-1 px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition-all flex items-center gap-1 shadow-md active:scale-95"
+                title="Agregar manualmente otro ciclo escolar para Maestros, Alumnos y Login"
+              >
+                <Plus className="w-3.5 h-3.5" /> Agregar Ciclo
+              </button>
             </div>
 
             <ExportPdfButton
@@ -1341,6 +1401,78 @@ export default function AdminPage() {
                   className="px-5 py-2 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center gap-1.5 active:scale-95"
                 >
                   <Save className="w-4 h-4" /> Guardar Nombre
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Ciclo Escolar Modal */}
+        {showAddCicloModal && (
+          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-5 animate-in fade-in zoom-in duration-200">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-black text-white">Agregar Nuevo Ciclo Escolar</h4>
+                    <p className="text-xs text-slate-400">Disponible para Maestros, Alumnos y Pantalla de Login</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowAddCicloModal(false)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {cicloMsg && (
+                <div
+                  className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
+                    cicloMsg.type === 'success'
+                      ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
+                      : 'bg-rose-500/10 border border-rose-500/30 text-rose-400'
+                  }`}
+                >
+                  <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                  {cicloMsg.text}
+                </div>
+              )}
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="block text-slate-300 font-extrabold mb-1">
+                    Nombre del Ciclo Escolar (ej. 2027-2028)
+                  </label>
+                  <input
+                    type="text"
+                    value={newCicloInput}
+                    onChange={(e) => setNewCicloInput(e.target.value)}
+                    placeholder="ej. 2027-2028 o 2028-2029"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none"
+                    autoFocus
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Al crearlo, aparecerá inmediatamente en los selectores de ciclo para Maestros, Alumnos, Administradores y Login.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 border-t border-slate-800 pt-3">
+                <button
+                  onClick={() => setShowAddCicloModal(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleCreateCicloEscolar}
+                  className="px-5 py-2.5 rounded-xl text-xs font-black bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center gap-1.5 active:scale-95 shadow-lg"
+                >
+                  <Plus className="w-4 h-4" /> Guardar Ciclo Escolar
                 </button>
               </div>
             </div>
