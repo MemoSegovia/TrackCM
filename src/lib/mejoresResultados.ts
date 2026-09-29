@@ -1,4 +1,4 @@
-import { AlumnoInscrito, RegistroAtletismo, RegistroCualitativo } from './types';
+import { AlumnoInscrito, RegistroAtletismo, RegistroCualitativo, UserSession } from './types';
 import { parseSecondsFromFormattedTime, parseDistanceInMeters } from './utils';
 
 export const PESTANIAS_GRUPOS_OFICIALES = [
@@ -13,6 +13,106 @@ export const PESTANIAS_GRUPOS_OFICIALES = [
   // Preparatoria
   '10A', '10B', '10C', '10D', '10E', '11A', '11B', '12A', '12B', '12C', '12D',
 ] as const;
+
+export function parseGrupoTab(tab: string): { nivel: string; grado: string; grupo: string } {
+  const t = (tab || '').trim().toUpperCase();
+  const nivel = getNivelByGrupo(t);
+
+  if (t.startsWith('K')) {
+    const grado = t.replace(/[^0-9]/g, '');
+    const grupo = t.replace(/[^A-Z]/g, '').replace(/^K/, '');
+    return { nivel, grado: grado || '3', grupo: grupo || 'A' };
+  }
+
+  const grado = t.replace(/[^0-9]/g, '');
+  const grupo = t.replace(/[^A-Z]/g, '');
+  return { nivel, grado, grupo };
+}
+
+export function isTabAllowedForUser(
+  g: string,
+  user: UserSession | null,
+  userLevelsByEmail?: Record<string, string[]>
+): boolean {
+  if (!user) return true;
+
+  const rolLower = user.rol?.toLowerCase() || '';
+  const isAdmin = rolLower === 'administrador' || rolLower === 'admin';
+  if (isAdmin) return true;
+
+  const userEmailLower = user.correo?.trim().toLowerCase() || '';
+  const sessionAssigned = user.nivelAsignado || '';
+  const mappedAssigned = userEmailLower && userLevelsByEmail?.[userEmailLower]
+    ? userLevelsByEmail[userEmailLower]
+    : [];
+
+  const rawAssignedList: string[] = [];
+  if (sessionAssigned) {
+    sessionAssigned.split(/[,/;]+/).forEach((s) => {
+      const clean = s.replace(/\s*\([^)]*\)/g, '').trim();
+      if (clean && !rawAssignedList.some((r) => r.toLowerCase() === clean.toLowerCase())) {
+        rawAssignedList.push(clean);
+      }
+    });
+  }
+
+  mappedAssigned.forEach((lvl) => {
+    const clean = lvl.replace(/\s*\([^)]*\)/g, '').trim();
+    if (clean && !rawAssignedList.some((r) => r.toLowerCase() === clean.toLowerCase())) {
+      rawAssignedList.push(clean);
+    }
+  });
+
+  // If assigned "Todos" or list is empty for non-teachers, allow all
+  if (rawAssignedList.some((l) => l.toLowerCase() === 'todos')) return true;
+  if (rawAssignedList.length === 0 && rolLower !== 'maestro') return true;
+
+  // Specific teacher rules (Diego Armando & Orlando Campos)
+  const isDiegoArmando =
+    (user.nombre?.toLowerCase().includes('diego armando') ||
+     user.correo?.toLowerCase().includes('diego.ibarra')) ?? false;
+
+  const isOrlandoCampos =
+    (user.nombre?.toLowerCase().includes('orlando campos') ||
+     user.correo?.toLowerCase().includes('orlando.campos')) ?? false;
+
+  const { nivel: tabNivel, grado: tabGrado, grupo: tabGrupo } = parseGrupoTab(g);
+
+  if (isDiegoArmando) {
+    if (tabGrado === '1' && ['A', 'B', 'C', 'D'].includes(tabGrupo)) return false;
+    if (tabGrado === '2' && ['A', 'B', 'C'].includes(tabGrupo)) return false;
+  }
+
+  if (isOrlandoCampos) {
+    if (tabGrado === '3' && ['A', 'B', 'C', 'D'].includes(tabGrupo)) return false;
+  }
+
+  if (rawAssignedList.length === 0) return true;
+
+  return rawAssignedList.some((assigned) => {
+    const cleanAssigned = assigned.trim().toLowerCase();
+
+    // Direct tab match (e.g. "1A", "K3A")
+    if (cleanAssigned === g.toLowerCase()) return true;
+
+    // Level string matching
+    if (cleanAssigned.includes('kinder') && tabNivel === 'Kinder') return true;
+    if (cleanAssigned.includes('secundaria') && tabNivel === 'Secundaria') return true;
+    if (cleanAssigned.includes('preparatoria') && tabNivel === 'Preparatoria') return true;
+
+    if (cleanAssigned.includes('primaria menor')) {
+      return tabNivel === 'Primaria Menor';
+    }
+    if (cleanAssigned.includes('primaria mayor')) {
+      return tabNivel === 'Primaria Mayor';
+    }
+    if (cleanAssigned.includes('primaria')) {
+      return tabNivel === 'Primaria Menor' || tabNivel === 'Primaria Mayor';
+    }
+
+    return false;
+  });
+}
 
 export function isStudentInGrupo(a: AlumnoInscrito, targetGrupo: string): boolean {
   const target = (targetGrupo || '').trim().toUpperCase();

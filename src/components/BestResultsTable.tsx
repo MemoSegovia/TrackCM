@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PESTANIAS_GRUPOS_OFICIALES, getNivelByGrupo, isStudentInGrupo, StudentBestMarksRow } from '@/lib/mejoresResultados';
+import { PESTANIAS_GRUPOS_OFICIALES, getNivelByGrupo, isStudentInGrupo, StudentBestMarksRow, isTabAllowedForUser } from '@/lib/mejoresResultados';
 import { AlumnoInscrito, UserSession } from '@/lib/types';
 import { Table, RefreshCw, FileText, CheckCircle, Search, Layers, Download, FileSpreadsheet, Pencil, Trash2, X, Save, AlertTriangle } from 'lucide-react';
 import { exportElementToPdf } from '@/lib/exportPdf';
@@ -16,6 +16,7 @@ export default function BestResultsTable({ user, cicloEscolar = '2026-2027' }: B
   const [nivel, setNivel] = useState<string>('Primaria Menor');
   const [rows, setRows] = useState<StudentBestMarksRow[]>([]);
   const [allStudents, setAllStudents] = useState<AlumnoInscrito[]>([]);
+  const [userLevelsByEmail, setUserLevelsByEmail] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState<boolean>(false);
   const [syncing, setSyncing] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -47,14 +48,21 @@ export default function BestResultsTable({ user, cicloEscolar = '2026-2027' }: B
   const rolLower = user?.rol?.toLowerCase() || '';
   const isAdmin = rolLower === 'administrador' || rolLower === 'admin';
 
-  // Load all students to detect which groups have enrolled students
+  // Calculate tabs allowed for current user (admins see all)
+  const allowedTabsList = (PESTANIAS_GRUPOS_OFICIALES as readonly string[]).filter((g) =>
+    isTabAllowedForUser(g, user, userLevelsByEmail)
+  );
+  const availableTabs: string[] = allowedTabsList.length > 0 ? allowedTabsList : Array.from(PESTANIAS_GRUPOS_OFICIALES);
+
+  // Load all students & user levels map
   useEffect(() => {
     async function loadAllStudents() {
       try {
         const res = await fetch('/api/estudiantes');
         const data = await res.json();
-        if (data.success && data.alumnos) {
-          setAllStudents(data.alumnos || []);
+        if (data.success) {
+          if (data.alumnos) setAllStudents(data.alumnos || []);
+          if (data.userLevelsByEmail) setUserLevelsByEmail(data.userLevelsByEmail || {});
         }
       } catch (err) {
         console.error(err);
@@ -68,18 +76,22 @@ export default function BestResultsTable({ user, cicloEscolar = '2026-2027' }: B
     return allStudents.filter((st) => isStudentInGrupo(st, tabName)).length;
   };
 
-  // Auto-switch to first group tab with enrolled students if current selected tab is empty
+  // Auto-switch selected group if current tab is not allowed or empty
   useEffect(() => {
-    if (allStudents.length > 0) {
-      const countInCurrent = getTabStudentCount(selectedGrupo);
-      if (countInCurrent === 0) {
-        const tabWithStudents = PESTANIAS_GRUPOS_OFICIALES.find((g) => getTabStudentCount(g) > 0);
-        if (tabWithStudents) {
-          setSelectedGrupo(tabWithStudents);
+    if (availableTabs.length > 0) {
+      if (!availableTabs.includes(selectedGrupo)) {
+        setSelectedGrupo(availableTabs[0]);
+      } else if (allStudents.length > 0) {
+        const countInCurrent = getTabStudentCount(selectedGrupo);
+        if (countInCurrent === 0) {
+          const tabWithStudents = availableTabs.find((g) => getTabStudentCount(g) > 0);
+          if (tabWithStudents) {
+            setSelectedGrupo(tabWithStudents);
+          }
         }
       }
     }
-  }, [allStudents]);
+  }, [allStudents, availableTabs, selectedGrupo]);
 
   useEffect(() => {
     setNivel(getNivelByGrupo(selectedGrupo));
@@ -319,10 +331,10 @@ export default function BestResultsTable({ user, cicloEscolar = '2026-2027' }: B
       {/* Group Tabs Grid */}
       <div className="space-y-2">
         <label className="block text-xs font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-          <Layers className="w-4 h-4 text-emerald-400" /> Pestaña de Grupo ({PESTANIAS_GRUPOS_OFICIALES.length} pestañas):
+          <Layers className="w-4 h-4 text-emerald-400" /> Pestañas de Grupo Asignadas ({availableTabs.length} {availableTabs.length === 1 ? 'pestaña' : 'pestañas'}):
         </label>
         <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2 bg-slate-950 rounded-2xl border border-slate-800">
-          {PESTANIAS_GRUPOS_OFICIALES.map((g) => {
+          {availableTabs.map((g) => {
             const count = getTabStudentCount(g);
             const isSelected = selectedGrupo === g;
             return (
