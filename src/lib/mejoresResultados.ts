@@ -196,7 +196,7 @@ function normalizeTokens(nameStr?: string): Set<string> {
 function matchesStudent(record: { ID_Alumno?: string; Nombre_Alumno?: string }, student: AlumnoInscrito): boolean {
   if (!record) return false;
 
-  if (record.ID_Alumno && student.ID_Alumno && String(record.ID_Alumno).trim() === String(student.ID_Alumno).trim()) {
+  if (record.ID_Alumno && student.ID_Alumno && String(record.ID_Alumno).trim().toLowerCase() === String(student.ID_Alumno).trim().toLowerCase()) {
     return true;
   }
 
@@ -209,6 +209,9 @@ function matchesStudent(record: { ID_Alumno?: string; Nombre_Alumno?: string }, 
       if (stTokens.has(t)) overlap++;
     });
     const minTokens = Math.min(recTokens.size, stTokens.size);
+    if (minTokens <= 1 && overlap >= 1) {
+      return true;
+    }
     if (overlap >= 2 && overlap >= minTokens - 1) {
       return true;
     }

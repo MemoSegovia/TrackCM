@@ -442,15 +442,16 @@ export async function addRegistroCualitativo(data: RegistroCualitativo): Promise
 }
 
 function matchesStudentHelper(recId?: string, recName?: string, targetId?: string, targetName?: string): boolean {
-  if (recId && targetId && recId.trim() === targetId.trim()) return true;
+  if (recId && targetId && String(recId).trim().toLowerCase() === String(targetId).trim().toLowerCase()) return true;
   if (!recName || !targetName) return false;
-  const cleanRec = recName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/,/g, ' ').toLowerCase().trim().split(/\s+/).filter(t => t.length > 1);
-  const cleanTgt = targetName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/,/g, ' ').toLowerCase().trim().split(/\s+/).filter(t => t.length > 1);
+  const cleanRec = recName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/,/g, ' ').toLowerCase().trim().split(/\s+/).filter(t => t.length > 0);
+  const cleanTgt = targetName.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/,/g, ' ').toLowerCase().trim().split(/\s+/).filter(t => t.length > 0);
   const setRec = new Set(cleanRec);
   const setTgt = new Set(cleanTgt);
   let overlap = 0;
   setRec.forEach(t => { if (setTgt.has(t)) overlap++; });
   const minTokens = Math.min(setRec.size, setTgt.size);
+  if (minTokens <= 1 && overlap >= 1) return true;
   return overlap >= 2 && overlap >= minTokens - 1;
 }
 

@@ -75,13 +75,30 @@ export async function GET(request: Request) {
     const studentNameClean = targetStudent?.Nombre_Completo?.trim().toLowerCase();
 
     const matchesRecord = (r: { ID_Alumno?: string; Nombre_Alumno?: string }) => {
+      // 1. Direct ID match (case-insensitive, trimmed)
+      if (r.ID_Alumno && studentId && String(r.ID_Alumno).trim().toLowerCase() === String(studentId).trim().toLowerCase()) {
+        return true;
+      }
+
+      // 2. Exact name match (normalized)
       const recName = (r.Nombre_Alumno || '').trim().toLowerCase().replace(/\s+/g, ' ');
-      if (recName && studentNameClean) {
-        return recName === studentNameClean.replace(/\s+/g, ' ');
+      if (recName && studentNameClean && recName === studentNameClean.replace(/\s+/g, ' ')) {
+        return true;
       }
-      if (r.ID_Alumno && studentId) {
-        return r.ID_Alumno === studentId;
+
+      // 3. Token-based fuzzy match
+      const cleanRec = (r.Nombre_Alumno || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/,/g, ' ').toLowerCase().trim().split(/\s+/).filter(t => t.length > 0);
+      const cleanTgt = (targetStudent?.Nombre_Completo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/,/g, ' ').toLowerCase().trim().split(/\s+/).filter(t => t.length > 0);
+      if (cleanRec.length > 0 && cleanTgt.length > 0) {
+        const setRec = new Set(cleanRec);
+        const setTgt = new Set(cleanTgt);
+        let overlap = 0;
+        setRec.forEach(t => { if (setTgt.has(t)) overlap++; });
+        const minTokens = Math.min(setRec.size, setTgt.size);
+        if (minTokens <= 1 && overlap >= 1) return true;
+        if (overlap >= 2 && overlap >= minTokens - 1) return true;
       }
+
       return false;
     };
 
